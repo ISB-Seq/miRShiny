@@ -1,0 +1,815 @@
+library(shiny)
+library(ggplot2)
+library(limma)
+library(RColorBrewer)
+library(DESeq2)
+library(edgeR)
+library(reshape)
+library(viridis)
+library(sva)
+library(grid)
+library(reader)
+library(NMF)
+library(plyr)
+  
+shinyUI(navbarPage(
+  title = "miRShiny",
+  selected = "About",
+  
+  tags$head(
+    tags$style(
+      'nav .container:first-child {margin-left:35px; margin-right:15px; width: 100%;}',
+      ".navbar {font-family:helvetica; font-size: 110%; color: #4d4d4d}"
+    )
+  ),
+  
+  tabPanel(
+    title = "About",
+    fluidRow(
+      column(
+        5,
+        offset = 2,
+        HTML(
+          "<h2 style='color:#4d4d4d; font-size: 250%; font-family:helvetica'><strong>About miRShiny</strong></h2>"
+        ),
+        HTML(
+          "<p style='font-family:helvetica'>miRShiny is an R Shiny-based interactive pipeline for the processing and visualization of microRNA sequencing data. </p>"
+        ),
+        HTML(
+          "<p style='font-family:helvetica'>
+          <strong>Last updated:</strong> 8/2/2017
+          </p>"
+        )
+      ),
+      column(
+        3,
+        align = "center",
+        offset = 0,
+        img(src = 'isbLogo.png', height = 120)
+      )
+    ),
+    fluidRow(
+      column(
+        8,
+        offset = 2,
+        tabsetPanel(
+          tabPanel(
+            title = "Input Data Format",
+            HTML("<br>"),
+            wellPanel(
+              h3("Input Data Format"),
+              HTML(
+                "<p style='font-family:helvetica'>
+                    <strong><em>Warning:</em></strong> 
+                    Avoid special characters like <code>whitespace</code>, <code>,</code>, <code>#</code> in sample/feature/condition labels to prevent parsing errors.
+                 </p>"
+              ),
+              HTML(
+                "<p style='font-family:helvetica'>
+                    <strong>Expression Data:</strong> 
+                    A counts matrix or similar numerical matrix, with rows corresponding to features, and columns corresponding to samples.
+                 </p>"
+              ),
+              HTML(
+                "<p style='font-family:helvetica'>
+                 <em>Requirements:</em> 
+                    <ol>
+                       <li>Uploaded in tab-seperated, comma-seperated, or similar text format</li>
+                       <li>Formatted as a matrix with dimensions [i,j], with multiple rows (i) and columns (j)</li>
+                       <li>One row and column of sample and feature name annotation, with NO repeated names</li>
+                    </ol>
+                 </p>"
+              ),
+              HTML(
+                "<p style='font-family:helvetica'>
+                    <strong>Conditions File:</strong> 
+                    A columnar text file including sample conditions and other sample annotations.
+                 </p>"
+              ),
+              HTML(
+                "<p style='font-family:helvetica'>
+                 <em>Requirements:</em> 
+                     <ol>
+                         <li>Uploaded in tab-seperated, comma-seperated, or similar text format</li>
+                         <li>Number of sample information rows (discounting header) in each column is equal to <em>j</em>, the number of columns/samples in the expression data.</li>
+                         <li>Includes at minimum one complete column titled <code>condition</code> to identify the state of each sample</li>
+                         <li>Exactly one header row</li>          
+                     </ol>
+                 </p>"
+              ),HTML(
+                "<p style='font-family:helvetica'>
+                 <em>Optional columns:</em> Additional column information is accepted in the Conditions File for various purposes.
+                     <ul>
+                         <li><code>group</code>: for subsetting the uploaded data set</li>
+                         <li><code>batch</code>: for considering results between batches and correcting batch error</li>
+                         <li><code>normalizer</code>: for a custom scaling vector in normalization</li>
+                     </ul>
+                 </p>"
+              )
+            )
+          ),
+          tabPanel(
+            title = "Developed With",
+            HTML("<br>"),
+            wellPanel(
+              h3("Developed With"),
+              HTML(
+                "<p style='font-family:helvetica'>
+                    <ul>
+                        <li><em>R</em>: 
+                          <ul>
+                            <li>R Core Team (2017). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria.</li>
+                            <li><a href = 'https://www.R-project.org/'>https://www.R-project.org/</a></li>
+                          </ul>
+                        </li>
+                        <li><em>Bioconductor</em>: 
+                          <ul>
+                            <li>Orchestrating high-throughput genomic analysis with Bioconductor. W. Huber, V.J. Carey, R. Gentleman,..., M. Morgan Nature Methods, 2015:12, 115.</li>
+                            <li><a href = 'https://www.bioconductor.org/'>https://www.bioconductor.org/</a></li>
+                          </ul>
+                        </li>
+                        <li><em>shiny</em>: 
+                          <ul>
+                            <li>Winston Chang, Joe Cheng, JJ Allaire, Yihui Xie and Jonathan McPherson (2017). shiny: Web Application Framework for R. R package version 1.0.3.</li>
+                            <li><a href = 'https://CRAN.R-project.org/package=shiny'>https://CRAN.R-project.org/package=shiny</a></li>
+                          </ul>
+                        </li>
+                        <li><em>Limma</em>:
+                          <ul>
+                            <li>Ritchie, M.E., Phipson, B., Wu, D., Hu, Y., Law, C.W., Shi, W., and Smyth, G.K. (2015). limma powers differential expression analyses for RNA-sequencing and microarray studies. Nucleic Acids Research 43(7), e47.</li>
+                          </ul>
+                        </li>
+                        <li><em>edgeR</em>: 
+                          <ul>
+                            <li>McCarthy DJ, Chen Y and Smyth GK (2012). Differential expression analysis of multifactor RNA-Seq experiments with respect to biological variation. Nucleic Acids Research 40, 4288-4297</li>
+                          </ul>
+                        </li>
+                        <li><em>DESeq2</em>:
+                          <ul>
+                            <li>Love, M.I., Huber, W., Anders, S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2 Genome Biology 15(12):550 (2014)</li>
+                          </ul>
+                        </li>
+                        <li><em>ggplot2</em>:
+                          <ul>
+                            <li>H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2009.</li>
+                          </ul>
+                        </li>
+                        <li><em>sva</em>:
+                          <ul>
+                            <li>Leek JT, Johnson WE, Parker HS, Fertig EJ, Jaffe AE, Storey JD, Zhang Y and Torres LC (2017). sva: Surrogate Variable Analysis. R package version 3.24.4.</li>
+                          </ul>
+                        </li>
+                        <li><em>NMF</em>:
+                          <ul>
+                            <li>Renaud Gaujoux, Cathal Seoighe (2010). A flexible R package for nonnegative matrix factorization. BMC Bioinformatics 2010, 11:367.</li>
+                          </ul>
+                        </li>
+                        <li><em>reader</em>:
+                          <ul>
+                            <li>Nicholas Cooper (2017). reader: Suite of Functions to Flexibly Read Data from Files. R package version 1.0.6.</li>
+                            <li><a href = 'https://CRAN.R-project.org/package=reader'>https://CRAN.R-project.org/package=reader</a></li>
+                          </ul>
+                        </li>
+                        <li><em>viridis</em>:
+                          <ul>
+                            <li>Simon Garnier (2017). viridis: Default Color Maps from 'matplotlib'. R package version 0.4.0.</li>
+                            <li><a href = 'https://CRAN.R-project.org/package=viridis'>https://CRAN.R-project.org/package=viridis</a></li>
+                          </ul>
+                        </li>
+                    </ul>
+                </p>"
+              )
+            )
+          ),
+          tabPanel(
+            title = "Change Log",
+            HTML("<br>"),
+            wellPanel(
+              h3("Change Log"),
+              HTML(
+                "<p style='font-family:helvetica'>
+                     <ul>
+                         <li><em>Usage Changes</em></li>
+                             <ul>
+                                  <li>Changed required label in sample information file to <code>condition</code> from <code>conditions</code> for compatibility purposes.</li>
+                             </ul>
+                         <li><em>Feature Changes</em></li>
+                             <ul>
+                                  <li>PCA Plots/Correlation Coefficient Matrix now generatable in Quality Control tab.</li>
+                                  <li>Quality Control plots can now be sorted/grouped/facetted by various factors</li>
+                                  <li>Batch correction from package 'sva' now enabled for experiments with batch effects.</li>
+                                  <li>Differentially expressed microRNAs can now be plotted side-by-side for comparison.</li>
+                                  <li>Expanded information shown in status boxes.</li>
+                             </ul>
+                         <li><em>Interface Changes</em></li>
+                             <ul>
+                                  <li>Data download links moved to a new tab.</li>
+                                  <li>Modals are now generated after successful upload and processing of data.</li>
+                                  <li>Loading bars reimplemented for most processes.</li>
+                                  <li>Minor label text changes.</li>
+                                  <li>Plot colors darkened for increased clarity.</li>
+                             </ul>
+                         <li><em>Bug Fixes</em></li>
+                             <ul>
+                                 <li>Filtering threshold now displays properly when subsetting data.</li>
+                             </ul>
+                     </ul>
+                 </p>"
+              )
+            )
+          )
+        )
+      )
+    )
+  ),
+  tabPanel(
+    title = "Data Analysis",
+    fluidRow(
+      column(
+        7,
+        offset = 1,
+        HTML(
+          "<h2 style='color:#4d4d4d; font-size: 265%; font-family:helvetica'><strong>miRShiny: An interactive microRNA analysis tool</strong></h2>"
+        ),
+        HTML(
+          "<p style='font-family:helvetica'>Upload, normalize, filter, and visualize microRNA sequencing data.</p>"
+        )
+      ),
+      column(
+        3,
+        align = "center",
+        offset = 0,
+        img(src = 'isbLogo.png', height = 100)
+      )
+    ),
+    fluidRow(
+      column(
+        10,
+        offset = 1,
+        tabsetPanel(
+          tabPanel(
+            title = "Data Upload",
+            fluidRow(
+              br(),
+              column(
+                5,
+                wellPanel(
+                  checkboxInput(
+                    inputId = "sampleData",
+                    label = "Use Sample Data?",
+                    value = FALSE
+                  ),
+                  conditionalPanel(
+                    condition = "input.sampleData",
+                    HTML("<hr>"),
+                    h4("Sample Data Information"),
+                    HTML(
+                      "<p style='font-family:helvetica'>
+                      <ul>
+                        <li><strong>GEO Accession: </strong>GSE71008</li>
+                        <li><strong>Dataset Name: </strong>Plasma extracellular RNA profiles in Healthy and Cancer patients</li>
+                        <li><strong>Source: </strong>Medical College of Wisconsin, Department of Pathology</li>
+                        <li><strong>Platform: </strong>Illumina Genome Analyzer (HS), NEB sRNA library preparation kit</li>
+                        <li><strong>Dataset Description: </strong>Small RNA Sequencing of 50 healthy controls, 100 colorectal cancer patients (25 each of Stage I-IV), 36 prostate cancer patients, and 3 pancreatic cancer patients.</li>
+                        <li><strong>Citation: </strong>Yuan T, Huang X, Woodcock M, Du M et al. Plasma extracellular RNA profiles in healthy and cancer patients. Sci Rep 2016 Jan 20;6:19413.</li>
+                      </ul>
+                      </p>"
+                    )
+                  ),
+                  conditionalPanel(
+                    condition = "!input.sampleData",
+                    HTML(
+                      "<p style='font-family:helvetica'>
+                      <strong><em><font color = '#bd4147'>Warning:</font></em></strong> 
+                      Avoid special characters like <code>whitespace</code>, <code>,</code>, <code>#</code> in sample/feature/condition labels to prevent parsing errors. 
+                      </p>"
+                    ),
+                    h4("Expression Data"),
+                    helpText("Counts matrix or similar matrix-form data including whole number read counts. Include exactly one row/column of sample/feature name annotation. Most common delimited text formats accepted."),
+                    fileInput(
+                      inputId = "files",
+                      label = "Upload expression data:",
+                      multiple = FALSE,
+                      accept = c('.txt', '.csv', '.tsv', '.sum')
+                    ),
+                    HTML('<hr style="border-color: #bfbfbf">'),
+                    h4("Sample Information"),
+                    helpText("File that includes columns of sample annotation. Number of rows must match number of samples. Must include column named \"condition\". Can include optional columns \"group\",\"batch\", and \"normalizer\" (see About page for further information). Most common delimited text formats accepted."),
+                    fileInput(
+                      inputId = "condition",
+                      label = "Upload conditions file:",
+                      multiple = FALSE,
+                      accept = c('.txt', '.csv', '.tsv', '.sum')
+                    )
+                  )
+                ),
+                wellPanel(
+                  actionButton(
+                    inputId = "upload",
+                    label = "Read Files",
+                    width = '100%'
+                  )
+                )
+              ),
+              column(
+                7,
+                wellPanel(
+                  align = "center",
+                  h4("File Upload Status"),
+                  div(tableOutput("uploadStatusTable"), #table output here
+                  style = "font-size:100%")
+                )
+              )
+            )
+          ),
+          tabPanel(
+            title = "Data Pre-Process",
+            fluidRow(
+              br(),
+              column(
+                4,
+                conditionalPanel(
+                  condition = "output.groupExists",
+                  wellPanel(
+                    h4("Subset Data Files"),
+                    helpText(
+                      "Select groups (from \"group\" column in condition file) to include them in data processing. If no groups are selected, all groups will be included."
+                    ),
+                    htmlOutput("subsetUI")
+                  )
+                ),
+                wellPanel(
+                  h4("Normalization"),
+                  selectInput(
+                    inputId = "norm",
+                    label = "Normalization Method",
+                    choices = c(
+                      "Total Count",
+                      "Median",
+                      "Quantile",
+                      "Scale",
+                      "CyclicLoess",
+                      "Upper Quartile",
+                      "DESeq",
+                      "TMM",
+                      "VSN",
+                      "CPM",
+                      "Housekeeping Gene"
+                    ),
+                    selected = "CPM"
+                  ),
+
+                  conditionalPanel(
+                    condition = "input.norm == 'Housekeeping Gene'",
+                    htmlOutput("housekeepUI")
+                  ),
+                  conditionalPanel(
+                    helpText("Voom: uses mean-variance generated precision weights in normalization."),
+                    condition = "input.norm != 'VSN'",
+                    checkboxInput(
+                      inputId = "voom",
+                      label = "Use voom?",
+                      value = FALSE
+                    )
+                  )
+                ),
+                conditionalPanel(
+                  condition = "output.batchExists",
+                  wellPanel(
+                    h4("Correct for batch error?"),
+                    helpText("Use with quality control figures. Methods are often unreliable."),
+                    selectInput(
+                      inputId = "batchCorrect",
+                      label = "Batch Correction Method",
+                      choices = c("None", "comBat", "sva", "Targetted Recentering"),
+                      selected = "None"
+                    ),
+                    conditionalPanel(
+                      condition = "input.batchCorrect == 'sva'",
+                      selectInput(
+                        inputId = "svaN",
+                        label = "Number of surrogate variables to use?",
+                        choices = c("Auto", 1:20),
+                        selected = "Auto"
+                      )
+                    ),
+                    conditionalPanel(
+                      condition = "input.batchCorrect == 'Targetted Recentering'",
+                      helpText("Targetted groups will be scaled to mean value of untargetted groups. An empty or complete selection will result in no correction."),
+                      htmlOutput("trGrpsUI")
+                    )
+                  )
+                ),
+                wellPanel(
+                  h4("Data Filtering"),
+                  helpText("Removes a feature unless expressed above set threshold on designated quantity of samples."),
+                  selectInput(
+                    inputId = "filtThresh",
+                    label = "Filtering Threshold Type",
+                    choices = c("Global Mean", "Value"),
+                    selected = "Global Mean"
+                  ),
+                  conditionalPanel(
+                    condition = "input.filtThresh == 'Value'",
+                    numericInput(
+                      inputId = "filtThreshVal",
+                      label = "Expression Threshold Value",
+                      min = 0,
+                      max = 1000,
+                      value = 5,
+                      step = 1
+                    )
+                  ),
+                  HTML('<hr style="border-color: #bfbfbf;">'),
+                  helpText("Required percentage/number of samples in which a feature must be expressed above the threshold value."),
+                  htmlOutput("filtPercent"),
+                  strong("Sample # Threshold:"),
+                  verbatimTextOutput("filtSampleNumber")
+                ),
+                wellPanel(
+                  actionButton(
+                    inputId = "processData",
+                    label = "Process Data",
+                    width = '100%'
+                  )
+                )
+              ),
+              column(8,
+                wellPanel(align = "center", h4("Pre-Processing Status"), div(tableOutput("normStatusTable"), style = "font-size:100%")),
+                wellPanel(
+                  h4(align = "center", "Pre-Processing Details"),
+                  HTML(
+                    "<p style='font-family:helvetica'>
+                    <strong>Normalization Options:</strong> 
+                      <ul>
+                        <li><em>Total Count: </em>Linear scaling based on each sample's total counts.</li>
+                        <li><em>Median: </em>Linear scaling based on each sample's median counts.</li>
+                        <li><em>Quantile: </em>Quantile normalization method from 'limma' package.</li>
+                        <li><em>Scale: </em>Scale normalization method from 'limma' package.</li>
+                        <li><em>Cyclic Loess: </em>Loess normalization method from 'Limma' package.</li>
+                        <li><em>Upper Quartile: </em>Linear scaling based on the samples' upper quartile values.</li>
+                        <li><em>DESeq: </em>Normalization method from the 'DESeq2' package.</li>
+                        <li><em>TMM: </em>Trimmed Means of M-Values, implemented in the 'limma' package.</li>
+                        <li><em>VSN: </em>Variance Stabilization Normalization, implemented in the 'vsn' package.</li>
+                        <li><em>CPM: </em>Linear scaling based on library counts per million.</li>
+                        <li><em>Housekeeping Gene: </em>Linear scaling using highly expressed features.</li>
+                      </ul>
+                    </p>"
+                  ),
+                  HTML(
+                    "<p style='font-family:helvetica'>
+                    <strong>Pre-Processing Steps:</strong> 
+                      <ol>
+                        <li>Uploaded data is cleaned to replace non-numeric values.</li>
+                        <li>Data is subset by groups, if enabled.</li>
+                        <li>Low count features are marked by user criteria to be filtered out.</li>
+                        <li>Data is normalized.</li>
+                        <li><code>voom</code> function is applied, if enabled.</li>
+                        <li>Batch correction is applied, if enabled.</li>
+                        <li>Data is log-transformed.</li>
+                        <li>Marked low-value features (step 3) are removed.</li>
+                      </ol>
+                    </p>"
+                  )
+                )
+              )
+            )
+          ),
+          tabPanel(
+            title = "Quality Control",
+            fluidRow(
+              br(),
+              column(
+                3,
+                wellPanel(
+                  selectInput(
+                    inputId = "plotType",
+                    label = "Select plot to generate:",
+                    choices = c("Boxplot", "PCA Plot", "Correlation Coefficient Matrix")
+                  ),
+                  conditionalPanel(
+                    condition = "input.plotType == 'Boxplot'",
+                    htmlOutput("sortBoxplotUI")
+                  ),
+                  conditionalPanel(
+                    condition = "input.plotType == 'PCA Plot'",
+                    htmlOutput("PCAtypeUI"),
+                    htmlOutput("sortPCAUI")
+                  ),
+                  conditionalPanel(
+                    condition = "input.plotType == 'Correlation Coefficient Matrix'",
+                    selectInput(
+                      inputId = "CCcalcType",
+                      label = "Calculation Method",
+                      choices = c("Pearson", "Spearman", "Kendall"),
+                      selected = "Pearson"
+                    ),
+                    htmlOutput("CCtypeUI")
+                  ),
+                  actionButton(
+                    inputId = "plotQC",
+                    label = "Plot!",
+                    width = '100%'
+                  )
+                ), 
+                wellPanel(
+                  checkboxInput(
+                    inputId = "QCcolorOptions",
+                    label = "Show color options?",
+                    value = FALSE
+                  ),
+                  conditionalPanel(
+                    condition = "input.QCcolorOptions",
+                    selectInput(
+                      inputId = "plotColors",
+                      label = "Color Palette",
+                      choices = 
+                        c(
+                          'Default',
+                          'YellowOrangeRed',
+                          'YellowGreenBlue',
+                          'RedYellowGreen',
+                          'RedYellowBlue',
+                          'RedBlue',
+                          'Set1',
+                          'Set2',
+                          'Set3',
+                          'Spectral',
+                          'Rainbow',
+                          'RedGreenBlue',
+                          'RedBlackGreen',
+                          'Rainbow2.0',
+                          'Viridis',
+                          'Magma',
+                          'Inferno',
+                          'Plasma'
+                        ),
+                      selected = 'Default'
+                    ), 
+                    checkboxInput(
+                      inputId = "colorsRev",
+                      label = "Reverse Palette?",
+                      value = FALSE
+                    )
+                  )
+                )
+              ),
+              column(
+                9,
+                align = "center",
+                htmlOutput("upperPlotUI"),
+                HTML('<br>'),
+                htmlOutput("lowerPlotUI")
+              )
+            )
+          ),
+          tabPanel(
+            title = "Differential Analysis",
+            fluidRow(
+              br(),
+              column(
+                3,
+                wellPanel(
+                  h4("Select comparison groups"),
+                  helpText("Condition group overlaps will not be processed. Invalid condition names may have been slightly modified"),
+                  htmlOutput("condition1UI"),
+                  htmlOutput("condition2UI")
+                ),
+                wellPanel(
+                  h4("MA Plot Threshold"),
+                  numericInput(
+                    inputId = "AveEcut",
+                    label = "A-value Cutoff",
+                    value = 7.5,
+                    min = 0,
+                    max = 10000,
+                    step = 1
+                  )
+                ),
+                wellPanel(
+                  h4("Volcano Plot Thresholds"),
+                  numericInput(
+                    inputId = "logFCcut",
+                    label = "Fold Change Cutoff",
+                    value = 1.2,
+                    min = 1.0,
+                    max = 10,
+                    step = 0.05
+                  ),
+                  numericInput(
+                    inputId = "pValCut",
+                    label = "p-Value Cutoff",
+                    value = 0.05,
+                    min = 0,
+                    max = 0.1,
+                    step = 0.001
+                  )
+                ),
+                wellPanel(
+                  h4("Heatmap"),
+                  selectInput(
+                    inputId = "dendClust",
+                    label = "Heatmap Clustering Dimensions",
+                    choices = c(0, 1, 2),
+                    selected = 1
+                  ),
+                  selectInput(
+                    inputId = "hmColors",
+                    label = "Heatmap Color Palette",
+                    choices = 
+                      c(
+                        'Default',
+                        'YellowOrangeRed',
+                        'YellowGreenBlue',
+                        'RedYellowGreen',
+                        'RedYellowBlue',
+                        'RedBlue',
+                        'Spectral',
+                        'Rainbow',
+                        'RedGreenBlue',
+                        'RedBlackGreen',
+                        'Rainbow2.0',
+                        'Viridis',
+                        'Magma',
+                        'Inferno',
+                        'Plasma'
+                      ),
+                    selected = "RedBlackGreen"
+                  ), 
+                  checkboxInput(
+                    inputId = "hmRev",
+                    label = "Reverse Color Palette?",
+                    value = FALSE
+                  )
+                )
+              ),
+              column(
+                9,
+                align = "center",
+                plotOutput("MAPlot", height = 400, width = '85%'),
+                HTML('<br>'),
+                HTML('<br>'),
+                plotOutput("volcanoPlot", height = 400, width = '85%'),
+                HTML('<br>'),
+                HTML('<br>'),
+                div(tableOutput("sigMirTable"), style = "font-size:100%"),
+                HTML('<br>'),
+                HTML('<br>'),
+                htmlOutput("heatmapUI")
+              )
+            )
+          ),
+          tabPanel(
+            title = "Individual Feature Visualization",
+            fluidRow(
+              br(),
+              column(
+                3,
+                wellPanel(
+                  htmlOutput('deSelectUI'),
+                  HTML('<hr>'),
+                  selectInput(
+                    inputId = 'dePlotType',
+                    label = "Plot Type",
+                    choices = c("Boxplot", "Violin Plot"),
+                    selected = "Boxplot"
+                  ),
+                  conditionalPanel(
+                    condition = "input.dePlotType == 'Boxplot'",
+                    checkboxInput(inputId = "deNotch", label = "Notch Boxes?", value = FALSE),
+                    checkboxInput(inputId = "deDot", label = "Overlay Dotplot?", value = FALSE)
+                  ),
+                  conditionalPanel(
+                    condition = "input.dePlotType == 'Violin Plot'",
+                    checkboxInput(inputId = "deBox", label = "Overlay Boxplot", value = TRUE)
+                  ),
+                  HTML('<hr>'),
+                  selectInput(
+                    inputId = "miRplotColors",
+                    label = "Color Palette",
+                    choices = 
+                      c(
+                        'Default',
+                        'Greys',
+                        'YellowOrangeRed',
+                        'YellowGreenBlue',
+                        'RedYellowGreen',
+                        'RedYellowBlue',
+                        'RedBlue',
+                        'Set1',
+                        'Set2',
+                        'Set3',
+                        'Spectral',
+                        'Rainbow',
+                        'RedGreenBlue',
+                        'RedBlackGreen',
+                        'Rainbow2.0',
+                        'Viridis',
+                        'Magma',
+                        'Inferno',
+                        'Plasma'
+                      ),
+                    selected = 'Greys'
+                  ), 
+                  checkboxInput(
+                    inputId = "miRcolorsRev",
+                    label = "Reverse Palette?",
+                    value = FALSE
+                  ),
+                  actionButton(
+                    inputId = "plotDE",
+                    label = "Plot!",
+                    width = '100%'
+                  )
+                )
+              ),
+              column(
+                9,
+                align = 'center',
+                plotOutput("singleMirBoxplot", height = 800, width = 950)
+              )
+            )
+          ),
+          tabPanel(
+            title = "Data Download",
+            fluidRow(
+              column(
+                8,
+                offset = 2,
+                align = "center",
+                br(),
+                wellPanel(
+                  h4("File Downloads"),
+                  textInput(
+                    inputId = 'hmImageName',
+                    label = 'Name for Heatmap Matrix File Download',
+                    value = "experimentName_heatmap",
+                    width = '75%'
+                  ),
+                  downloadButton('downloadHM', 'Download'),
+                  HTML('<hr style = "width = 75%">'),
+                  textInput(
+                    inputId = 'hmName',
+                    label = 'Name for Heatmap Matrix File Download',
+                    value = "experimentName_heatmapVals",
+                    width = '75%'
+                  ),
+                  downloadButton('downloadMatrix', 'Download'),
+                  HTML('<hr style = "width = 75%">'),
+                  textInput(
+                    inputId = 'deName',
+                    label = 'Name for Differentially Expressed miRNA Table File Download',
+                    value = "experimentName_miRDETable",
+                    width = '75%'
+                  ),
+                  downloadButton('downloadDETab', 'Download'),
+                  HTML('<hr style = "width = 75%">'),
+                  textInput(
+                    inputId = 'fullName',
+                    label = 'Name for Complete miRNA Table File Download',
+                    value = "experimentName_miRFullTable",
+                    width = '75%'
+                  ),
+                  downloadButton('downloadFullTab', 'Download')
+                )
+              )
+            )
+          ),
+          tabPanel(
+            title = "Accuracy Evaluation",
+            fluidRow(
+              HTML("<br>"),
+              column(
+                5,
+                wellPanel(
+                  helpText("Ideal microRNA profile file should be a columnar .csv file, with rows corresponding to features. Up to five columns are accepted. The same formatting requirements carry over from the expression/conditions file. Row names should not be included."),
+                  fileInput(
+                    inputId = "idealProfile",
+                    label = "Upload Synthetic Profile",
+                    width = '100%'
+                  ),
+                  selectInput(
+                    inputId = "idealCorrType",
+                    label = "Correlation Coefficient Method",
+                    choices = c("Pearson", "Kendall", "Spearman"),
+                    selected = "Pearson"
+                  ),
+                  HTML("<hr>"),
+                  actionButton(inputId = "idealButton", label = "Process", width = '100%')
+                )
+              ),
+              column(
+                7, 
+                align = "center",
+                wellPanel(
+                  h4("Summary Statistics"),
+                  tableOutput("idealProfileTable")
+                )
+              )
+            )
+          )#
+        )
+      )
+    )
+  )
+))
