@@ -849,7 +849,7 @@ shinyUI(navbarPage(
                     condition = "input.powerUseData && output.sigMirsExist",
                     checkboxInput(
                       inputId = "powerUseCutoff",
-                      label = "Only use differentially expressed miRNA found in Differential Analysis for estimations?",
+                      label = "Use differentially expressed miRNA found in Differential Analysis for estimations?",
                       value = F
                     )
                   ),
@@ -857,11 +857,11 @@ shinyUI(navbarPage(
                     condition = "!(input.powerUseData && input.powerUseCutoff)",
                     numericInput(
                       inputId = "powerFoldChange",
-                      label = "Minimum fold change",
+                      label = "Minimum fold change of DE",
                       value = 1,
                       min = 0,
                       max = 20,
-                      step = 0.1
+                      step = 0.05
                     ),
                     numericInput(
                       inputId = "powerFDR",
@@ -870,6 +870,13 @@ shinyUI(navbarPage(
                       min = 0,
                       max = 0.5,
                       step = 0.001
+                    ),
+                    numericInput(
+                      inputId = "powerPrognosticFeatureCount",
+                      label = "Expected number of DE miRNA",
+                      value = 10,
+                      min = 0,
+                      step = 1
                     )
                   ),
                   conditionalPanel(
@@ -890,15 +897,22 @@ shinyUI(navbarPage(
                   conditionalPanel(
                     condition = "!input.powerUseData",
                     numericInput(
+                      inputId = "powerFeatureCount",
+                      label = "Total number of miRNA",
+                      value = 1000,
+                      min = 0,
+                      step = 10
+                    ),
+                    numericInput(
                       inputId = "powerAverageReadCounts",
-                      label = "Minimum average read counts",
+                      label = "Average read counts",
                       value = 5,
                       min = 0,
                       step = 1
                     ),
                     numericInput(
                       inputId = "powerMaxDispersion",
-                      label = "Maximum dispersion of data",
+                      label = "Dispersion of data",
                       value = 0.5,
                       min = 0,
                       step = 0.01

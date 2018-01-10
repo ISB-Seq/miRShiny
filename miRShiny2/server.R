@@ -1515,22 +1515,25 @@ shinyServer(function(input, output) {
       fdr = input$powerFDR
       averagereadcounts = input$powerAverageReadCounts
       maxdispersion = input$powerMaxDispersion
+      featurecount = input$powerFeatureCount
+      prognosticfeaturecount = input$powerPrognosticFeatureCount
       dataMatrixDistribution = NULL
       repNumber = 1
       #if user wants, we set above variables based on calculations of uploaded data
       if(input$powerUseData) {
         setProgress(0.2, message = "Calculating other parameters")
+        featurecount = nrow(rawElist())
         if(input$powerUseCutoff) { #use differentially expressed mirna
           mirList = topTableList()
           sigmirs = mirList[storageValues$sig,]
-          foldchange = 2 ^ min(sigmirs$logFC)
+          prognosticfeaturecount = nrow(sigmirs)
+          foldchange = 2 ^ min(abs(sigmirs$logFC))
           fdr = max(sigmirs$adj.P.Val)
-          dataMatrixDistribution = est_count_dispersion(rawElist()$E[storageValues$sig,],
-            group = rawElist()$targets$group, minAveCount = 0, subSampleNum = 100)
-        } else {
-          dataMatrixDistribution = est_count_dispersion(rawElist()$E,
-            group = rawElist()$targets$group, minAveCount = 0, subSampleNum = 100)
         }
+        #get the distribution object from the raw elist, even if user uses DE mirna
+        #produces an NA if there is no replication
+        dataMatrixDistribution = est_count_dispersion(rawElist()$E,
+          group = rawElist()$targets$group, minAveCount = 0, subSampleNum = 100)
         if(!is.na(dataMatrixDistribution$common.dispersion)) {
           #only used to print out parameters in the table
           maxdispersion = "NA"
@@ -1543,6 +1546,7 @@ shinyServer(function(input, output) {
         }
         #only used to print out parameters in the table
         averagereadcounts = "NA"
+        #only use data points with read counts >= 5
         if(length(which(dataMatrixDistribution$pseudo.counts.mean >= 5)) < input$powerRepNumber) {
           showModal(modalDialog(
             title = "Warning Calculating Parameters",
@@ -1557,9 +1561,12 @@ shinyServer(function(input, output) {
         setProgress(0.5, message = "Calculating power")
         #can only display 5
         storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]] = est_power_curve_better(
-          n = samplesize, f = fdr, rho = foldchange, lambda0 = averagereadcounts, phi0 = maxdispersion, 
+          n = samplesize, f = fdr, rho = foldchange, lambda0 = averagereadcounts, phi0 = maxdispersion, m = featurecount, m1 = prognosticfeaturecount,
           stepsize = input$powerStepInterval, squarestep = (input$powerPlotChoice == "Squared intervals"), usegradient = (input$powerPlotChoice == "Gradient-sensitive intervals"), gradientdetail = input$powerGradientDetail,
           distributionObject = dataMatrixDistribution,repNumber = repNumber)
+        #store these paramters to display later
+        storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]]$parameters["m"] = featurecount
+        storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]]$parameters["m1"] = prognosticfeaturecount
       } else if(input$powerPlotType == "Power"){
         setProgress(0.5, message = "Calculating sample size")
         desiredpower = input$powerMaxPower
@@ -1574,15 +1581,15 @@ shinyServer(function(input, output) {
           return(NULL)
         }
         if(is.null(dataMatrixDistribution)) {
-          storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]] = sample_size(power = desiredpower, f = fdr, rho = foldchange, lambda0 = averagereadcounts, phi0 = maxdispersion, storeProcess = T)
+          storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]] = sample_size(power = desiredpower, f = fdr, rho = foldchange, lambda0 = averagereadcounts, phi0 = maxdispersion, m = featurecount, m1 = prognosticfeaturecount, storeProcess = T)
         } else {
-          storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]] = sample_size_distribution(power = desiredpower, f = fdr, rho = foldchange, distributionObject = dataMatrixDistribution, repNumber = repNumber, storeProcess = T)
+          storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]] = sample_size_distribution(power = desiredpower, f = fdr, rho = foldchange, distributionObject = dataMatrixDistribution, repNumber = repNumber, m = featurecount, m1 = prognosticfeaturecount, storeProcess = T)
         }
       }
       #debug print
       #print(storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]])
       setProgress(1, message = "Plotting")
-      #TODO: display a table of #samples vs power
+      #displays a table of #samples vs power
       storageValues$powerTables[[(storageValues$numPowerCurves %% 5) + 1]] = 
       if(!is.null(storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]])){
         curve = storageValues$powerCurves[[(storageValues$numPowerCurves %% 5) + 1]]
@@ -1610,12 +1617,13 @@ shinyServer(function(input, output) {
       plot_power_curve_better(storageValues$powerCurves, las = 2, main = "Sample Size vs. Statistical Power")
     }
   })
+  #displays parameters of each graph
   output$powerParameterTable = renderTable({
     if(!is.null(storageValues$powerCurves)){
-      reg = data.frame(storageValues$powerCurves[[1]]$parameters[c("fdr","rho","lambda0","phi0")])
+      reg = data.frame(storageValues$powerCurves[[1]]$parameters[c("fdr","rho","lambda0","phi0", "m", "m1")])
       if(length(storageValues$powerCurves) > 1) {
         for(x in 2:length(storageValues$powerCurves)) {
-          reg = data.frame(reg, storageValues$powerCurves[[x]]$parameters[c("fdr","rho","lambda0","phi0")])
+          reg = data.frame(reg, storageValues$powerCurves[[x]]$parameters[c("fdr","rho","lambda0","phi0", "m", "m1")])
         }
       }
       
@@ -1624,7 +1632,9 @@ shinyServer(function(input, output) {
           "False Discovery Rate",
           "Fold Change",
           "Average Read Count",
-          "Dispersion"
+          "Dispersion",
+          "Total Number of miRNAs",
+          "Expected Number of DE miRNAs"
         )
       colnames(reg) = paste("Power Graph", 1:length(storageValues$powerCurves))
       return(reg)
