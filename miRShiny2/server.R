@@ -880,9 +880,11 @@ shinyServer(function(input, output) {
         sig_mir_list <- mirlist[sig,]
         storageValues$sigMirs <- sig_mir_list$SystematicName
         
+        
         heatmap_match <-
-          elist$genes$ProbeName %in% sig_mir_list$ProbeName
-        heatmap_elist <- elist[heatmap_match,]
+          match(elist$genes$ProbeName, sig_mir_list$ProbeName, nomatch = NA)
+        heatmap_elist <- elist[!is.na(heatmap_match),]
+        heatmap_elist = heatmap_elist[order(heatmap_match[!is.na(heatmap_match)]),] #sorts by the table
         incProgress(0.2, detail = "Applying row transform")
         topMatrix <- t(scale(t(heatmap_elist$E)))
         topMatrix[topMatrix < -3] <- -3
