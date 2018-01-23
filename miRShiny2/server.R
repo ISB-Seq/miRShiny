@@ -885,6 +885,7 @@ shinyServer(function(input, output) {
           match(elist$genes$ProbeName, sig_mir_list$ProbeName, nomatch = NA)
         heatmap_elist <- elist[!is.na(heatmap_match),]
         heatmap_elist = heatmap_elist[order(heatmap_match[!is.na(heatmap_match)]),] #sorts by the table
+        heatmap_elist = heatmap_elist[,order(heatmap_elist$targets$Condition)] #arranges columns by condition
         incProgress(0.2, detail = "Applying row transform")
         topMatrix <- t(scale(t(heatmap_elist$E)))
         topMatrix[topMatrix < -3] <- -3
@@ -911,8 +912,8 @@ shinyServer(function(input, output) {
           rv <- NA
           cv <- NA
         } else if(input$dendClust==1){
-          rv <- NA
-          cv <- TRUE
+          rv <- TRUE
+          cv <- NA
         } else{
           rv <- TRUE
           cv <- TRUE
