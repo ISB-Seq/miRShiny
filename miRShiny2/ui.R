@@ -34,6 +34,7 @@ dashboardPage(skin="yellow",
                            menuSubItem("Data Pre-Process", tabName = "Pre-Process", icon = icon("gears")),
                            menuSubItem("Quality Control", tabName = "Quality", icon = icon("certificate")),
                            menuSubItem("Differential Analysis", tabName = "Differential", icon = icon("calculator")),
+                           menuSubItem("Genomic Visualization", tabName = "Genome", icon = icon("circle-o")),
                            menuSubItem("Individual Feature Visualization", tabName = "Visualization", icon = icon("eye")),
                            menuSubItem("Data Download", tabName = "Download", icon = icon("download")),
                            menuSubItem("Accuracy Evaluation", tabName = "Accuracy", icon = icon("bullseye")),
@@ -732,6 +733,11 @@ dashboardPage(skin="yellow",
                               htmlOutput("heatmapUI")
                             )
                           )
+                  ),
+                  tabItem(tabName = "Genome",
+                          fluidRow(
+                            plotOutput("circularplot")
+                            )
                   ),
                   tabItem(tabName = "Visualization",
                           fluidRow(

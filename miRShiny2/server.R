@@ -12,6 +12,7 @@ library(reader)
 library(NMF)
 library(plyr)
 library(RnaSeqSampleSize)
+library(circlize)
 #library(pwr)
 
 #######
@@ -1658,6 +1659,12 @@ shinyServer(function(input, output) {
   output$powerTable5 = renderTable(if(!is.null(storageValues$numPowerCurves) && storageValues$numPowerCurves > 4){storageValues$powerTables[[5]]}else{NULL}, digits = 3, caption = "<b><h4>Power table 5</h4></b>", caption.placement = getOption("xtable.caption.placement", "top"),
                                    caption.width = getOption("xtable.caption.width", NULL))
   
+  output$circularplot = renderPlot({
+    withProgress(message = "Rendering base", value = 0.1, {
+      circos.initializeWithIdeogram()
+      circos.clear()
+    })
+  })
   ################### functions ###################
   
   #function to return list of probes that
