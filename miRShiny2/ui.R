@@ -241,6 +241,12 @@ dashboardPage(skin="yellow",
                                           <li><a href = 'http://bioconductor.org/packages/release/bioc/html/RnaSeqSampleSize.html'>http://bioconductor.org/packages/release/bioc/html/RnaSeqSampleSize.html</a></li>
                                           </ul>
                                           </li>
+                                          <li><em>circlize</em>:
+                                          <ul>
+                                          <li>Gu, Z. (2014) circlize implements and enhances circular visualization in R. Bioinformatics.</li>
+                                          <li><a href = '10.1093/bioinformatics/btu393'>10.1093/bioinformatics/btu393</a></li>
+                                          </ul>
+                                          </li>
                                           </ul>
                                           </p>"
                             )
