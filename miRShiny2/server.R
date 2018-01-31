@@ -13,6 +13,7 @@ library(NMF)
 library(plyr)
 library(RnaSeqSampleSize)
 library(circlize)
+library(openxlsx)
 #library(pwr)
 
 #######
@@ -1660,8 +1661,46 @@ shinyServer(function(input, output) {
                                    caption.width = getOption("xtable.caption.width", NULL))
   
   output$circularplot = renderPlot({
-    withProgress(message = "Rendering base", value = 0.1, {
-      circos.initializeWithIdeogram()
+    withProgress(message = "Mapping to Genome", value = 0.1, {
+      #read file
+      #mblistfile = system.file("HGNC_miRBase_list(20160323)curated.xlsx", package = "openxlsx")
+      mblist = read.xlsx(xlsxFile = "HGNC_miRBase_list(20160323)curated.xlsx", sheet = 1)
+      maplist = read.xlsx(xlsxFile = "human_miRNA_name_mapping(2017-07-28).xlsx", sheet = 1)
+      
+      #get names n vals
+      mirlist = topTableList()
+      sig_mir_list <- mirlist#[storageValues$sig,]
+      start = regexpr(":", sig_mir_list$SystematicName) + 1
+      names = substr(sig_mir_list$SystematicName, start, 1000)
+      values = sig_mir_list$logFC
+      #map onto database
+      #TODO: get it to work with all name types, e.g. if it isn't under compatibleName, look in pre-miRNA
+      map_match = match(names, maplist$compatibleName, nomatch = NA)
+      sig_match = match(maplist$compatibleName, names, nomatch = NA)
+      map_val = values[sig_match]
+      maplist = cbind(maplist, map_val) #attach vals to the maplist
+      map_sig = maplist[map_match,]
+      
+      map_match = match(mblist$"miRBase.ID(s)", map_sig$"pre-miRNA", nomatch = NA)
+      mb_match = match(map_sig$"pre-miRNA", mblist$"miRBase.ID(s)", nomatch = NA)
+      mb_val = map_sig[map_match, "map_val"] #map vals from the maplist to the mirbase list
+      mblist = cbind(mblist, mb_val) #attach vals to mirbaselist
+      mb_sig = mblist[mb_match,]
+      
+      #prepare to graph
+      data = mb_sig[!is.na(mb_sig[,"mb_val"]),c("Chromosome", "Gene.Start.(bp)","Gene.End.(bp)","mb_val")]
+      data[,"Chromosome"] = paste("chr", data[,"Chromosome"], sep = "")
+      colnames(data) = c("chr", "start", "end", "value1")
+      rownames(data) = 1:nrow(data)
+      
+      circos.initializeWithIdeogram(plotType = c("axis", "labels"))
+      circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, panel.fun = function(region, value, ...) {
+        #a difference of 1000000 is barely enough to show up on screen
+        tempregion = cbind(region$start - 1000000, region$end + 1000000)
+        sigmoid = 1/(1 + (exp(value * 10)))
+        circos.genomicRect(tempregion, ytop = 1, ybottom = 0, col = rand_color(nrow(value), hue = "red", luminosity = "dark", transparency = 1 - sigmoid$value1), border = NA)
+        print(sigmoid)
+      })
       circos.clear()
     })
   })
