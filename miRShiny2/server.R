@@ -1210,20 +1210,12 @@ shinyServer(function(input, output) {
   
   output$lowerPlotUI <- renderUI({
     input$plotQC
-    w <- 1000
-    h <- 400
-    isolate(
-      if(input$plotType == 'PCA'){
-        return(NULL)
-      }
-      else if(input$plotType == 'Correlation Coefficient Matrix'){
-        return(NULL)
-      }
-      else if(input$plotType == 'Boxplot'){
+      if(input$plotType == 'Boxplot'){
         w <- '100%'
         h <- 450
+      }else{
+        return(NULL)
       }
-    )
     plotOutput("lowerQCPlot", width = w, height = h)
   })
   
