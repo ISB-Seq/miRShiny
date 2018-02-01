@@ -742,7 +742,7 @@ dashboardPage(skin="yellow",
                   ),
                   tabItem(tabName = "Genome",
                           fluidRow(
-                            plotOutput("circularplot", height = "800px")
+                            plotOutput("circularplot", width = "100%", height = "1000px")
                             )
                   ),
                   tabItem(tabName = "Visualization",

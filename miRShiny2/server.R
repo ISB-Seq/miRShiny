@@ -1661,48 +1661,103 @@ shinyServer(function(input, output) {
                                    caption.width = getOption("xtable.caption.width", NULL))
   
   output$circularplot = renderPlot({
-    withProgress(message = "Mapping to Genome", value = 0.1, {
-      #read file
-      #mblistfile = system.file("HGNC_miRBase_list(20160323)curated.xlsx", package = "openxlsx")
-      mblist = read.xlsx(xlsxFile = "HGNC_miRBase_list(20160323)curated.xlsx", sheet = 1)
-      maplist = read.xlsx(xlsxFile = "human_miRNA_name_mapping(2017-07-28).xlsx", sheet = 1)
-      
-      #get names n vals
-      mirlist = topTableList()
-      sig_mir_list <- mirlist#[storageValues$sig,]
-      start = regexpr(":", sig_mir_list$SystematicName) + 1
-      names = substr(sig_mir_list$SystematicName, start, 1000)
-      values = sig_mir_list$logFC
-      #map onto database
-      #TODO: get it to work with all name types, e.g. if it isn't under compatibleName, look in pre-miRNA
-      map_match = match(names, maplist$compatibleName, nomatch = NA)
-      sig_match = match(maplist$compatibleName, names, nomatch = NA)
-      map_val = values[sig_match]
-      maplist = cbind(maplist, map_val) #attach vals to the maplist
-      map_sig = maplist[map_match,]
-      
-      map_match = match(mblist$"miRBase.ID(s)", map_sig$"pre-miRNA", nomatch = NA)
-      mb_match = match(map_sig$"pre-miRNA", mblist$"miRBase.ID(s)", nomatch = NA)
-      mb_val = map_sig[map_match, "map_val"] #map vals from the maplist to the mirbase list
-      mblist = cbind(mblist, mb_val) #attach vals to mirbaselist
-      mb_sig = mblist[mb_match,]
-      
-      #prepare to graph
-      data = mb_sig[!is.na(mb_sig[,"mb_val"]),c("Chromosome", "Gene.Start.(bp)","Gene.End.(bp)","mb_val")]
-      data[,"Chromosome"] = paste("chr", data[,"Chromosome"], sep = "")
-      colnames(data) = c("chr", "start", "end", "value1")
-      rownames(data) = 1:nrow(data)
-      
-      circos.initializeWithIdeogram(plotType = c("axis", "labels"))
-      circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, panel.fun = function(region, value, ...) {
-        #a difference of 1000000 is barely enough to show up on screen
-        tempregion = cbind(region$start - 1000000, region$end + 1000000)
-        sigmoid = 1/(1 + (exp(value * 10)))
-        circos.genomicRect(tempregion, ytop = 1, ybottom = 0, col = rand_color(nrow(value), hue = "red", luminosity = "dark", transparency = 1 - sigmoid$value1), border = NA)
-        print(sigmoid)
+    if(is.null(topTableList())) {
+      withProgress(message = "Preparing to graph", value = 0.1, {
+        circos.par("start.degree" = 0, "gap.degree" = c(rep(1,23), 5))
+        circos.initializeWithIdeogram(plotType = c("ideogram", "axis", "labels"))
+        circos.clear()
       })
-      circos.clear()
-    })
+    } else {
+      withProgress(message = "Mapping to Genome", value = 0.1, {
+        #read file
+        #mblistfile = system.file("HGNC_miRBase_list(20160323)curated.xlsx", package = "openxlsx")
+        mblist = read.xlsx(xlsxFile = "HGNC_miRBase_list(20160323)curated.xlsx", sheet = 1)
+        maplist = read.xlsx(xlsxFile = "human_miRNA_name_mapping(2017-07-28).xlsx", sheet = 1)
+       
+        #get names n vals
+        mirlist = topTableList()
+        start = regexpr(":", mirlist$SystematicName) + 1
+        names = substr(mirlist$SystematicName, start, 1000)
+        values = abs(mirlist$logFC)
+        expression = mirlist$AveExpr
+        sig = storageValues$sig
+        
+        #map onto database
+        #TODO: get it to work with all name types, e.g. if it isn't under compatibleName, look in pre-miRNA
+        map_match = match(names, maplist$compatibleName, nomatch = NA)
+        mir_match = match(maplist$compatibleName, names, nomatch = NA)
+        map_val = values[mir_match]
+        map_expr = expression[mir_match]
+        map_sig = sig[mir_match]
+        maplist = cbind(maplist, map_val, map_expr, map_sig) #attach vals to the maplist
+        map_use = maplist[map_match,]
+        
+        nmapped = nrow(map_use[!is.na(map_use[,"pre-miRNA"]),])
+        if(nmapped / nrow(mirlist) < 0.25) { #if less than 25% gets mapped
+          showModal(modalDialog(
+            title = "Warning Mapping miRNAs to database",
+            paste("Less than 25% of miRNAs successfully mapped", nmapped, "out of", nrow(sig_mir_list), "mapped")
+          ))
+          
+        }
+        
+        map_match = match(mblist$"miRBase.ID(s)", map_use$"pre-miRNA", nomatch = NA)
+        mb_match = match(map_use$"pre-miRNA", mblist$"miRBase.ID(s)", nomatch = NA)
+        mb_val = map_use[map_match, "map_val"] #map vals from the maplist to the mirbase list
+        mb_expr = map_use[map_match, "map_expr"]
+        mb_sig = map_use[map_match, "map_sig"]
+        mblist = cbind(mblist, mb_val, mb_expr, mb_sig) #attach vals to mirbaselist
+        mb_use = mblist[mb_match,]
+        
+        setProgress(value = 0.3, message = "Preparing to graph")
+        #prepare to graph
+        data = mb_use[!is.na(mb_use[,"mb_val"]),c("Chromosome", "Gene.Start.(bp)","Gene.End.(bp)","mb_val", "mb_expr", "mb_sig", "miRBase.ID(s)")]
+        data[,"Chromosome"] = paste("chr", data[,"Chromosome"], sep = "")
+        colnames(data) = c("chr", "start", "end", "foldchange", "averageexpression", "sig", "id")
+        rownames(data) = 1:nrow(data)
+        data_sig = data[data[,"sig"],]
+        
+        circos.par("start.degree" = 0, "gap.degree" = c(rep(5,8), 9, rep(5,14), 5))
+        circos.initializeWithIdeogram(plotType = c("ideogram", "axis", "labels"))
+        #a difference of 1000000 is barely enough to show up on screen
+        minwidth = 1500000
+        circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, panel.fun = function(region, value, ...) {
+          tempregion = cbind(region$start - minwidth, region$end + minwidth)
+          weight = 1 - 1 / (1 + value$averageexpression/10)
+          ytop = rep(0.9, nrow(region))
+          ytop[value$sig] = 1.1
+          ybottom = rep(0.1, nrow(region))
+          ybottom[value$sig] = -0.1
+          circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = rgb(0, 0.5, 0, alpha = weight), border = NA)
+          incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing average expression", detail = CELL_META$sector.index)
+        })
+        circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "Avg. Expr.", facing = "downward", sector.index = "chr1")
+        for(chr in unique(data_sig[,"chr"])) { #the text in the middle of the ave expr bars
+          data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
+          data_sig_chr_region = data_sig_chr[,c("start", "end")]
+          #yeah just trust this little piece of code below
+          circos.genomicText(data_sig_chr_region, NULL, 0.5 + uy(seq(-1.5 + nrow(data_sig_chr) * 1.5, 1.5 + nrow(data_sig_chr) * -1.5, length.out = nrow(data_sig_chr)),"mm"), labels = round(data_sig_chr[,"averageexpression"],2), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
+        }
+        circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, panel.fun = function(region, value, ...) {
+          tempregion = cbind(region$start - minwidth, region$end + minwidth)
+          weight = 1 - 1 / (1 + value$foldchange)
+          ytop = rep(0.9, nrow(region))
+          ytop[value$sig] = 1.1
+          ybottom = rep(0.1, nrow(region))
+          ybottom[value$sig] = -0.1
+          circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = rgb(0.5, 0, 0, alpha = weight), border = NA)
+          incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing foldchange", detail = CELL_META$sector.index)
+        })
+        circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "Fold Change", facing = "downward", sector.index = "chr1")
+        for(chr in unique(data_sig[,"chr"])) { #text in the middle of the logfc bars and the miRNA ids
+          data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
+          data_sig_chr_region = data_sig_chr[,c("start", "end")]
+          circos.genomicText(data_sig_chr_region, NULL, 0.5 + uy(seq(-1.5 + nrow(data_sig_chr) * 1.5, 1.5 + nrow(data_sig_chr) * -1.5, length.out = nrow(data_sig_chr)),"mm"), labels = round(data_sig_chr[,"foldchange"],2), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
+          circos.genomicText(data_sig_chr_region, NULL, uy(seq(-3, nrow(data_sig_chr) * -3, length.out = nrow(data_sig_chr)),"mm"), labels = data_sig_chr[,"id"], cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
+        }
+        circos.clear()
+      })
+    }
   })
   ################### functions ###################
   
