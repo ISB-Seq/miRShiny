@@ -36,18 +36,29 @@ shinyServer(function(input, output) {
         if(input$sampleData){
           matrix <- read.csv(file = "MCW_CRC_Exo_Matrix.csv", header = TRUE, row.names = 1, check.names = FALSE)
         } else{
-          sep <- get.delim(win(input$files$datapath), n = 20, skip = 1)
+          sep <- get.delim(win(input$files$datapath), n = 40, skip = 1)
+          print("Inferred Delimiter:")
+          print(get.delim(win(input$files$datapath), n = 40, skip = 1))
           matrix <-
             read.table(
               win(input$files$datapath),
               row.names = 1,
               header = TRUE,
-              sep = sep,              
+              sep = sep,
+              #changed sep = sep to sep = "\t" to test
               check.names = FALSE
             )
+          
+          #debug print
+          #print(is.na(matrix))
+          #print(matrix)
+          # sim shows 0 columns for singleassign mis=0
+          #print(str(matrix))
         }
         incProgress(1 / 6, detail = 'Reading matrix')
         
+        #debug print
+        #print(matrix, digits = 5)
         
         #clean matrix data
         incProgress(1 / 6, detail = 'Cleaning matrix data')
@@ -58,10 +69,16 @@ shinyServer(function(input, output) {
           ))
           return(NULL)
         }
+
+        
         matrix[is.na(matrix)] <- 0
         matrix[is.null(matrix)] <- 0
         matrix[matrix < 0] <- 0
         matrix <- floor(matrix)
+        
+        #debug print
+        #Error is Triggered Here
+        #print(matrix)
         
         #read in Conditions File
         incProgress(1 / 6, detail = 'Getting conditions')
@@ -85,6 +102,9 @@ shinyServer(function(input, output) {
               check.names = FALSE
             )
         }
+        
+        # debug print
+        # print(matrix, digits = 5)
         
         #checking objects
         incProgress(1 / 6, detail = 'Checking objects')
@@ -110,6 +130,8 @@ shinyServer(function(input, output) {
           return(NULL)
         }
         
+        #debug print
+        #print(matrix, digits = 5)
         
         #build elist objects
         incProgress(1 / 6, detail = 'Building expression list objects')
