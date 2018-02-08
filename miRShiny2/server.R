@@ -1661,13 +1661,7 @@ shinyServer(function(input, output) {
                                    caption.width = getOption("xtable.caption.width", NULL))
   
   output$circularplot = renderPlot({
-    if(is.null(topTableList())) {
-      withProgress(message = "Preparing to graph", value = 0.1, {
-        circos.par("start.degree" = 0, "gap.degree" = c(rep(1,23), 5))
-        circos.initializeWithIdeogram(plotType = c("ideogram", "axis", "labels"))
-        circos.clear()
-      })
-    } else {
+    if(!is.null(topTableList())) {
       withProgress(message = "Mapping to Genome", value = 0.1, {
         #read file
         #mblistfile = system.file("HGNC_miRBase_list(20160323)curated.xlsx", package = "openxlsx")
@@ -1678,14 +1672,21 @@ shinyServer(function(input, output) {
         mirlist = topTableList()
         start = regexpr(":", mirlist$SystematicName) + 1
         names = substr(mirlist$SystematicName, start, 1000)
-        values = abs(mirlist$logFC)
+        values = mirlist$logFC
         expression = mirlist$AveExpr
         sig = storageValues$sig
-        
         #map onto database
         #TODO: get it to work with all name types, e.g. if it isn't under compatibleName, look in pre-miRNA
-        map_match = match(names, maplist$compatibleName, nomatch = NA)
-        mir_match = match(maplist$compatibleName, names, nomatch = NA)
+        map_match = match(names, c(maplist$compatibleName, maplist$unifiedName), nomatch = NA) #do not put unique on this
+        map_match = (map_match - 1) %% nrow(maplist) + 1
+        mir_match = match(c(maplist$compatibleName, maplist$unifiedName), names, nomatch = NA)
+        for(i in seq(nrow(maplist), length(mir_match), by = 1)) { #collapse the excess rows
+          if(is.na(mir_match[i %% nrow(maplist) + 1]) && !is.na(mir_match[i + 1])) { #lmao 1 based indexing
+            mir_match[i %% nrow(maplist) + 1] = mir_match[i + 1]
+            #print(paste("replacing index", i %% nrow(maplist) + 1,"with value",mir_match[i + 1]))
+          }
+        }
+        mir_match = mir_match[1:nrow(maplist)]
         map_val = values[mir_match]
         map_expr = expression[mir_match]
         map_sig = sig[mir_match]
@@ -1700,30 +1701,32 @@ shinyServer(function(input, output) {
           ))
           
         }
-        
-        map_match = match(mblist$"miRBase.ID(s)", map_use$"pre-miRNA", nomatch = NA)
+        #map_match = match(mblist$"miRBase.ID(s)", map_use$"pre-miRNA", nomatch = NA)
         mb_match = match(map_use$"pre-miRNA", mblist$"miRBase.ID(s)", nomatch = NA)
-        mb_val = map_use[map_match, "map_val"] #map vals from the maplist to the mirbase list
-        mb_expr = map_use[map_match, "map_expr"]
-        mb_sig = map_use[map_match, "map_sig"]
-        mblist = cbind(mblist, mb_val, mb_expr, mb_sig) #attach vals to mirbaselist
-        mb_use = mblist[mb_match,]
+        map_chr = mblist[mb_match, "Chromosome"] #map chromosome info from mirbaselist to maplist
+        map_gstart = mblist[mb_match, "Gene.Start.(bp)"]
+        map_gend = mblist[mb_match, "Gene.End.(bp)"]
+        map_use = cbind(map_use, map_chr, map_gstart, map_gend) #attach chromosome info
+        #mb_use = mblist[mb_match,]
         
         setProgress(value = 0.3, message = "Preparing to graph")
         #prepare to graph
-        data = mb_use[!is.na(mb_use[,"mb_val"]),c("Chromosome", "Gene.Start.(bp)","Gene.End.(bp)","mb_val", "mb_expr", "mb_sig", "miRBase.ID(s)")]
-        data[,"Chromosome"] = paste("chr", data[,"Chromosome"], sep = "")
+        data = map_use[!is.na(map_use[,"map_val"]),c("map_chr", "map_gstart","map_gend","map_val", "map_expr", "map_sig", "unifiedName")]
+        data[,"map_chr"] = paste("chr", data[,"map_chr"], sep = "")
         colnames(data) = c("chr", "start", "end", "foldchange", "averageexpression", "sig", "id")
         rownames(data) = 1:nrow(data)
         data_sig = data[data[,"sig"],]
         
-        circos.par("start.degree" = 0, "gap.degree" = c(rep(5,8), 9, rep(5,14), 5))
+        circos.par("start.degree" = 0, "gap.degree" = c(rep(5,8), 9, rep(5,14), 5),
+                   "track.height" = 0.15)
         circos.initializeWithIdeogram(plotType = c("ideogram", "axis", "labels"))
         #a difference of 1000000 is barely enough to show up on screen
-        minwidth = 1500000
-        circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, panel.fun = function(region, value, ...) {
+        minwidth = 1200000
+        expressioncoefficient = 5 / max(data[,"averageexpression"]) #for calculating transparency
+        foldchangecoefficient = 2.5 / max(abs(data$foldchange))
+        circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
           tempregion = cbind(region$start - minwidth, region$end + minwidth)
-          weight = 1 - 1 / (1 + value$averageexpression/10)
+          weight = 1 - 1 / (1 + value$averageexpression * expressioncoefficient)
           ytop = rep(0.9, nrow(region))
           ytop[value$sig] = 1.1
           ybottom = rep(0.1, nrow(region))
@@ -1738,9 +1741,9 @@ shinyServer(function(input, output) {
           #yeah just trust this little piece of code below
           circos.genomicText(data_sig_chr_region, NULL, 0.5 + uy(seq(-1.5 + nrow(data_sig_chr) * 1.5, 1.5 + nrow(data_sig_chr) * -1.5, length.out = nrow(data_sig_chr)),"mm"), labels = round(data_sig_chr[,"averageexpression"],2), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
         }
-        circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, panel.fun = function(region, value, ...) {
+        circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
           tempregion = cbind(region$start - minwidth, region$end + minwidth)
-          weight = 1 - 1 / (1 + value$foldchange)
+          weight = 1 - 1 / (1 + abs(value$foldchange * foldchangecoefficient) ^ 2)
           ytop = rep(0.9, nrow(region))
           ytop[value$sig] = 1.1
           ybottom = rep(0.1, nrow(region))
@@ -1753,7 +1756,7 @@ shinyServer(function(input, output) {
           data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
           data_sig_chr_region = data_sig_chr[,c("start", "end")]
           circos.genomicText(data_sig_chr_region, NULL, 0.5 + uy(seq(-1.5 + nrow(data_sig_chr) * 1.5, 1.5 + nrow(data_sig_chr) * -1.5, length.out = nrow(data_sig_chr)),"mm"), labels = round(data_sig_chr[,"foldchange"],2), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
-          circos.genomicText(data_sig_chr_region, NULL, uy(seq(-3, nrow(data_sig_chr) * -3, length.out = nrow(data_sig_chr)),"mm"), labels = data_sig_chr[,"id"], cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
+          circos.genomicText(data_sig_chr_region, NULL, uy(seq(-3, nrow(data_sig_chr) * -3, length.out = nrow(data_sig_chr)),"mm"), labels = substr(data_sig_chr[,"id"], 5, 1000), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
         }
         circos.clear()
       })
