@@ -14,6 +14,7 @@ library(plyr)
 library(RnaSeqSampleSize)
 library(circlize)
 library(openxlsx)
+library(ComplexHeatmap)
 #library(pwr)
 
 #######
@@ -1692,9 +1693,9 @@ shinyServer(function(input, output) {
         #map onto database
         #TODO: get it to work with all name types, e.g. if it isn't under compatibleName, look in pre-miRNA
         map_match = match(names, c(maplist$compatibleName, maplist$unifiedName), nomatch = NA) #do not put unique on this
-        map_match = (map_match - 1) %% nrow(maplist) + 1
+        map_match = (map_match - 1) %% nrow(maplist) + 1 #if anything matches to unifiedName, set it to the right index
         mir_match = match(c(maplist$compatibleName, maplist$unifiedName), names, nomatch = NA)
-        for(i in seq(nrow(maplist), length(mir_match), by = 1)) { #collapse the excess rows
+        for(i in seq(nrow(maplist), length(mir_match), by = 1)) { #collapse the excess rows by using them to replace NAs
           if(is.na(mir_match[i %% nrow(maplist) + 1]) && !is.na(mir_match[i + 1])) { #lmao 1 based indexing
             mir_match[i %% nrow(maplist) + 1] = mir_match[i + 1]
             #print(paste("replacing index", i %% nrow(maplist) + 1,"with value",mir_match[i + 1]))
@@ -1736,16 +1737,34 @@ shinyServer(function(input, output) {
         circos.initializeWithIdeogram(plotType = c("ideogram", "axis", "labels"))
         #a difference of 1000000 is barely enough to show up on screen
         minwidth = 1200000
-        expressioncoefficient = 5 / max(data[,"averageexpression"]) #for calculating transparency
-        foldchangecoefficient = 2.5 / max(abs(data$foldchange))
+        expressioncoefficient = 3 / max(data[,"averageexpression"]) #for calculating transparency
+        foldchangecoefficient = 3 / max(abs(data$foldchange))
+        expressioncolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
+          res_col = rgb(0, 0.5, 0, alpha = 1 - 1 / (1 + (x * expressioncoefficient) ^ 2))
+          if(return_rgb) {
+            res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
+          }
+          return(res_col)
+        }
+        foldchangecolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
+          res_col = rgb(0.5, 0, 0, alpha = 1 - 1 / (1 + abs(x * foldchangecoefficient) ^ 2))
+          if(return_rgb) {
+            res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
+          }
+          return(res_col)
+        }
+        expressionlegend = Legend(at = c(min(data[,"averageexpression"]), mean(data[,"averageexpression"]), max(data[,"averageexpression"])),
+                                  grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = expressioncolorfun, title_position = "topleft", title = "Expression")
+        foldchangelegend = Legend(at = c(-max(abs(data$foldchange)), 0, max(abs(data$foldchange))),
+                                  grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = foldchangecolorfun, title_position = "topleft", title = "Fold Change")
         circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
           tempregion = cbind(region$start - minwidth, region$end + minwidth)
-          weight = 1 - 1 / (1 + value$averageexpression * expressioncoefficient)
+          #weight = 1 - 1 / (1 + value$averageexpression * expressioncoefficient)
           ytop = rep(0.9, nrow(region))
           ytop[value$sig] = 1.1
           ybottom = rep(0.1, nrow(region))
           ybottom[value$sig] = -0.1
-          circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = rgb(0, 0.5, 0, alpha = weight), border = NA)
+          circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = expressioncolorfun(value$averageexpression), border = NA)
           incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing average expression", detail = CELL_META$sector.index)
         })
         circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "Avg. Expr.", facing = "downward", sector.index = "chr1")
@@ -1757,12 +1776,12 @@ shinyServer(function(input, output) {
         }
         circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
           tempregion = cbind(region$start - minwidth, region$end + minwidth)
-          weight = 1 - 1 / (1 + abs(value$foldchange * foldchangecoefficient) ^ 2)
+          #weight = 1 - 1 / (1 + abs(value$foldchange * foldchangecoefficient) ^ 2)
           ytop = rep(0.9, nrow(region))
           ytop[value$sig] = 1.1
           ybottom = rep(0.1, nrow(region))
           ybottom[value$sig] = -0.1
-          circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = rgb(0.5, 0, 0, alpha = weight), border = NA)
+          circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = foldchangecolorfun(value$foldchange), border = NA)
           incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing foldchange", detail = CELL_META$sector.index)
         })
         circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "Fold Change", facing = "downward", sector.index = "chr1")
@@ -1773,6 +1792,15 @@ shinyServer(function(input, output) {
           circos.genomicText(data_sig_chr_region, NULL, uy(seq(-3, nrow(data_sig_chr) * -3, length.out = nrow(data_sig_chr)),"mm"), labels = substr(data_sig_chr[,"id"], 5, 1000), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
         }
         circos.clear()
+        
+        pushViewport(viewport(x = unit(1.0, "snpc"), y = 0.25, width = unit(4, "mm"), 
+                              height = unit(4, "mm"), just = c("left", "center")))
+        grid.draw(expressionlegend)
+        upViewport()
+        pushViewport(viewport(x = unit(1.0, "snpc"), y = 0.75, width = unit(4, "mm"), 
+                              height = unit(4, "mm"), just = c("left", "center")))
+        grid.draw(foldchangelegend)
+        upViewport()
       })
     }
   })
