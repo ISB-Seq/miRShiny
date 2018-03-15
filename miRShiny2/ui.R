@@ -736,7 +736,10 @@ dashboardPage(skin="yellow",
                               div(tableOutput("sigMirTable"), style = "font-size:100%"),
                               HTML('<br>'),
                               HTML('<br>'),
-                              htmlOutput("heatmapUI")
+                              htmlOutput("heatmapUI"),
+                              HTML('<br>'),
+                              HTML('<br>'),
+                              plotOutput("corrmap", height = 400, width = '85%')
                             )
                           )
                   ),

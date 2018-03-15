@@ -964,6 +964,19 @@ shinyServer(function(input, output) {
     
   })
   
+  output$corrmap = renderPlot({
+    if(!is.null(topTableList()) && !is.null(storageValues$sig)){
+      #print(rawElist()$E[rownames(topTableList()[storageValues$sig,]),]);
+      cormat = cor(t(rawElist()$E[rownames(topTableList()[storageValues$sig,]),]), method = "pearson")
+      #print(cormat)
+      cor.m = melt(cormat)
+      storageValues$sigcor.m = cor.m
+      #print(cor.m)
+      p = ggplot(cor.m, aes(x = X1, y = X2)) + geom_tile(aes(fill = value), colour = "white") + labs(x = "Feature", y = "Feature")
+      plotColor(p, discrete = FALSE, input = input$plotColors, rev = input$colorsRev)
+    }
+  })
+  
   output$sigMirTable <- renderTable({
     if(!is.null(topTableList())){
       mirlist <- topTableList()
