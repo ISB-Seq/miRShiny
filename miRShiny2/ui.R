@@ -722,6 +722,55 @@ dashboardPage(skin="yellow",
                                   label = "Reverse Color Palette?",
                                   value = FALSE
                                 )
+                              ),
+                              wellPanel(
+                                h4("Correlation Matrix Options"),
+                                selectInput(
+                                  inputId = "CCcalcType",
+                                  label = "Calculation Method",
+                                  choices = c("Pearson", "Spearman", "Kendall"),
+                                )
+                              ),
+                              wellPanel(
+                                checkboxInput(
+                                  inputId = "CCcolorOptions",
+                                  label = "Show color options?",
+                                  value = FALSE
+                                ),
+                                conditionalPanel(
+                                  condition = "input.CCcolorOptions",
+                                  selectInput(
+                                    inputId = "CCplotColors",
+                                    label = "Color Palette",
+                                    choices =
+                                      c(
+                                        'Default',
+                                        'YellowOrangeRed',
+                                        'YellowGreenBlue',
+                                        'RedYellowGreen',
+                                        'RedYellowBlue',
+                                        'RedBlue',
+                                        'Set1',
+                                        'Set2',
+                                        'Set3',
+                                        'Spectral',
+                                        'Rainbow',
+                                        'RedGreenBlue',
+                                        'RedBlackGreen',
+                                        'Rainbow2.0',
+                                        'Viridis',
+                                        'Magma',
+                                        'Inferno',
+                                        'Plasma'
+                                      ),
+                                    selected = 'Default'
+                                  ),
+                                  checkboxInput(
+                                    inputId = "CCcolorsRev",
+                                    label = "Reverse Palette?",
+                                    value = FALSE
+                                  )
+                                )
                               )
                             ),
                             column(
@@ -739,7 +788,7 @@ dashboardPage(skin="yellow",
                               htmlOutput("heatmapUI"),
                               HTML('<br>'),
                               HTML('<br>'),
-                              plotOutput("corrmap", height = 400, width = '85%')
+                              htmlOutput("corrmapUI")
                             )
                           )
                   ),

@@ -13,12 +13,12 @@ library(NMF)
 library(plyr)
 library(RnaSeqSampleSize)
 library(circlize)
-library(openxlsx)
-library(ComplexHeatmap)
+library(openxlsx) #remember to cite
+library(ComplexHeatmap) #remember to cite, used for legends
 #library(pwr)
 
 #######
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
   ##########################
   
   storageValues <- reactiveValues()
@@ -967,13 +967,13 @@ shinyServer(function(input, output) {
   output$corrmap = renderPlot({
     if(!is.null(topTableList()) && !is.null(storageValues$sig)){
       #print(rawElist()$E[rownames(topTableList()[storageValues$sig,]),]);
-      cormat = cor(t(rawElist()$E[rownames(topTableList()[storageValues$sig,]),]), method = "pearson")
+      cormat = cor(t(rawElist()$E[rownames(topTableList()[storageValues$sig,]),]), method = tolower(input$CCcalcType))
       #print(cormat)
       cor.m = melt(cormat)
       storageValues$sigcor.m = cor.m
       #print(cor.m)
-      p = ggplot(cor.m, aes(x = X1, y = X2)) + geom_tile(aes(fill = value), colour = "white") + labs(x = "Feature", y = "Feature")
-      plotColor(p, discrete = FALSE, input = input$plotColors, rev = input$colorsRev)
+      p = ggplot(cor.m, aes(x = X1, y = X2)) + geom_tile(aes(fill = value), colour = "white") + labs(x = "Feature", y = "Feature") + theme(text = element_text(size = 18), axis.text.x = element_text(angle = 90, hjust = 1))
+      plotColor(p, discrete = FALSE, input = input$CCplotColors, rev = input$CCcolorsRev)
     }
   })
   
@@ -1236,8 +1236,8 @@ shinyServer(function(input, output) {
         h <- 1000
       }
       else if(input$plotType == 'Correlation Coefficient Matrix'){
-        w <- 950
-        h <- 950
+        w <- "100%"
+        h <- session$clientData$output_upperQCPlot_width
       }
       else if(input$plotType == 'Boxplot'){
         w <- '100%'
@@ -1256,6 +1256,12 @@ shinyServer(function(input, output) {
         return(NULL)
       }
     plotOutput("lowerQCPlot", width = w, height = h)
+  })
+  
+  output$corrmapUI = renderUI({
+    storageValues$sig
+    h = session$clientData$output_corrmap_width
+    plotOutput("corrmap", width = "100%", height = h)
   })
   
   output$sortBoxplotUI <- renderUI({
@@ -1806,12 +1812,12 @@ shinyServer(function(input, output) {
         }
         circos.clear()
         
-        pushViewport(viewport(x = unit(1.0, "snpc"), y = 0.25, width = unit(4, "mm"), 
-                              height = unit(4, "mm"), just = c("left", "center")))
+        pushViewport(viewport(x = 1.4, y = 0.2, width = 1, 
+                              height = unit(4, "mm"), just = c("right", "center")))
         grid.draw(expressionlegend)
         upViewport()
-        pushViewport(viewport(x = unit(1.0, "snpc"), y = 0.75, width = unit(4, "mm"), 
-                              height = unit(4, "mm"), just = c("left", "center")))
+        pushViewport(viewport(x = unit(1.4, "npc"), y = 0.8, width = 1, 
+                              height = unit(4, "mm"), just = c("right", "center")))
         grid.draw(foldchangelegend)
         upViewport()
       })
