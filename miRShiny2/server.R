@@ -1696,7 +1696,7 @@ shinyServer(function(input, output, session) {
   
   output$circularplot = renderPlot({
     if(!is.null(topTableList())) {
-      withProgress(message = "Mapping to Genome", value = 0.1, {
+      withProgress(message = "Mapping to Genome", value = 0.05, {
         #read file
         #mblistfile = system.file("HGNC_miRBase_list(20160323)curated.xlsx", package = "openxlsx")
         mblist = read.xlsx(xlsxFile = "HGNC_miRBase_list(20160323)curated.xlsx", sheet = 1)
@@ -1743,13 +1743,30 @@ shinyServer(function(input, output, session) {
         map_use = cbind(map_use, map_chr, map_gstart, map_gend) #attach chromosome info
         #mb_use = mblist[mb_match,]
         
-        setProgress(value = 0.3, message = "Preparing to graph")
+        setProgress(value = 0.1, message = "Preparing to graph")
         #prepare to graph
         data = map_use[!is.na(map_use[,"map_val"]),c("map_chr", "map_gstart","map_gend","map_val", "map_expr", "map_sig", "unifiedName")]
         data[,"map_chr"] = paste("chr", data[,"map_chr"], sep = "")
         colnames(data) = c("chr", "start", "end", "foldchange", "averageexpression", "sig", "id")
         rownames(data) = 1:nrow(data)
         data_sig = data[data[,"sig"],]
+        
+        #set up the dataframes to create links
+        bedstart1 = regexpr(":", storageValues$sigcor.m$X1) + 1
+        bedstart2 = regexpr(":", storageValues$sigcor.m$X2) + 1
+        bednames1 = substr(storageValues$sigcor.m$X1, bedstart1, 1000)
+        bednames2 = substr(storageValues$sigcor.m$X2, bedstart2, 1000)
+        mirbed1_match = match(bednames1, names, nomatch = NA)
+        mirbed2_match = match(bednames2, names, nomatch = NA)
+        mapbed1_match = match(maplist[map_match[mirbed1_match],]$"unifiedName", data_sig$"id", nomatch = NA)
+        mapbed2_match = match(maplist[map_match[mirbed2_match],]$"unifiedName", data_sig$"id", nomatch = NA)
+        bed1 = data_sig[mapbed1_match, c("chr", "start", "end")]
+        bed2 = data_sig[mapbed2_match, c("chr", "start", "end")]
+        linkuse = !is.na(mapbed1_match) & !is.na(mapbed2_match) & !(bednames1 == bednames2)
+        bed1 = bed1[linkuse,]
+        bed2 = bed2[linkuse,]
+        linkvals = storageValues$sigcor.m$value[linkuse]
+        
         
         circos.par("start.degree" = 0, "gap.degree" = c(rep(5,8), 9, rep(5,14), 5),
                    "track.height" = 0.15)
@@ -1772,9 +1789,9 @@ shinyServer(function(input, output, session) {
           }
           return(res_col)
         }
-        expressionlegend = Legend(at = c(min(data[,"averageexpression"]), mean(data[,"averageexpression"]), max(data[,"averageexpression"])),
+        expressionlegend = Legend(at = c(signif(min(data[,"averageexpression"])), signif(mean(data[,"averageexpression"])), signif(max(data[,"averageexpression"]))),
                                   grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = expressioncolorfun, title_position = "topleft", title = "Expression")
-        foldchangelegend = Legend(at = c(-max(abs(data$foldchange)), 0, max(abs(data$foldchange))),
+        foldchangelegend = Legend(at = c(signif(-max(abs(data$foldchange))), 0, signif(max(abs(data$foldchange)))),
                                   grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = foldchangecolorfun, title_position = "topleft", title = "Fold Change")
         circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
           tempregion = cbind(region$start - minwidth, region$end + minwidth)
@@ -1803,6 +1820,12 @@ shinyServer(function(input, output, session) {
           circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = foldchangecolorfun(value$foldchange), border = NA)
           incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing foldchange", detail = CELL_META$sector.index)
         })
+        incProgress(amount = 0.2, message = paste("Graphing", nrow(linkvals), "links"))
+        bed1$"start" = bed1$"start" - minwidth * 4
+        bed1$"end" = bed1$"end" + minwidth * 4
+        bed2$"start" = bed2$"start" - minwidth * 4
+        bed2$"end" = bed2$"end" + minwidth * 4
+        circos.genomicLink(bed1, bed2, col = rgb(1, 0.5, 0, alpha = abs(linkvals ^ 5)), border = NA, w=0.8)
         circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "Fold Change", facing = "downward", sector.index = "chr1")
         for(chr in unique(data_sig[,"chr"])) { #text in the middle of the logfc bars and the miRNA ids
           data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
@@ -1810,13 +1833,14 @@ shinyServer(function(input, output, session) {
           circos.genomicText(data_sig_chr_region, NULL, 0.5 + uy(seq(-1.5 + nrow(data_sig_chr) * 1.5, 1.5 + nrow(data_sig_chr) * -1.5, length.out = nrow(data_sig_chr)),"mm"), labels = round(data_sig_chr[,"foldchange"],2), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
           circos.genomicText(data_sig_chr_region, NULL, uy(seq(-3, nrow(data_sig_chr) * -3, length.out = nrow(data_sig_chr)),"mm"), labels = substr(data_sig_chr[,"id"], 5, 1000), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
         }
+        
         circos.clear()
         
-        pushViewport(viewport(x = 1.4, y = 0.2, width = 1, 
+        pushViewport(viewport(x = 1.4, y = 0.1, width = 1, 
                               height = unit(4, "mm"), just = c("right", "center")))
         grid.draw(expressionlegend)
         upViewport()
-        pushViewport(viewport(x = unit(1.4, "npc"), y = 0.8, width = 1, 
+        pushViewport(viewport(x = unit(1.4, "npc"), y = 0.9, width = 1, 
                               height = unit(4, "mm"), just = c("right", "center")))
         grid.draw(foldchangelegend)
         upViewport()
