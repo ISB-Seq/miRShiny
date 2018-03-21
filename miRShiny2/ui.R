@@ -688,11 +688,15 @@ dashboardPage(skin="yellow",
                               ),
                               wellPanel(
                                 h4("Heatmap"),
-                                selectInput(
-                                  inputId = "dendClust",
-                                  label = "Heatmap Clustering Dimensions",
-                                  choices = c(0, 1, 2),
-                                  selected = 1
+                                checkboxInput(
+                                  inputId = "dendClustR",
+                                  label = "Cluster features?",
+                                  value = F
+                                ),
+                                checkboxInput(
+                                  inputId = "dendClustC",
+                                  label = "Cluster samples?",
+                                  value = F
                                 ),
                                 selectInput(
                                   inputId = "hmColors",

@@ -933,16 +933,8 @@ shinyServer(function(input, output, session) {
         storageValues$annotation <- Condition
         
         incProgress(0.2, detail = "Building heatmap")
-        if(input$dendClust==0){
-          rv <- NA
-          cv <- NA
-        } else if(input$dendClust==1){
-          rv <- TRUE
-          cv <- NA
-        } else{
-          rv <- TRUE
-          cv <- TRUE
-        }
+        rv = ifelse(input$dendClustR && nrow(topMatrix) > 1, T, NA)
+        cv = ifelse(input$dendClustC && ncol(topMatrix) > 1, T, NA)
         a <-
           aheatmap(
             topMatrix,
@@ -965,7 +957,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$corrmap = renderPlot({
-    if(!is.null(topTableList()) && !is.null(storageValues$sig)){
+    if(!is.null(topTableList()) && !is.null(storageValues$sig) && sum(storageValues$sig, na.rm = T) > 1){
       #print(rawElist()$E[rownames(topTableList()[storageValues$sig,]),]);
       cormat = cor(t(rawElist()$E[rownames(topTableList()[storageValues$sig,]),]), method = tolower(input$CCcalcType))
       #print(cormat)
@@ -1695,7 +1687,7 @@ shinyServer(function(input, output, session) {
                                    caption.width = getOption("xtable.caption.width", NULL))
   
   output$circularplot = renderPlot({
-    if(!is.null(topTableList())) {
+    if(!is.null(topTableList()) && sum(storageValues$sig) > 0) {
       withProgress(message = "Mapping to Genome", value = 0.05, {
         #read file
         #mblistfile = system.file("HGNC_miRBase_list(20160323)curated.xlsx", package = "openxlsx")
@@ -1789,10 +1781,19 @@ shinyServer(function(input, output, session) {
           }
           return(res_col)
         }
-        expressionlegend = Legend(at = c(signif(min(data[,"averageexpression"])), signif(mean(data[,"averageexpression"])), signif(max(data[,"averageexpression"]))),
+        linkvalcolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
+          res_col = rgb(ifelse(x > 0, 1, 0), 0.5, ifelse(x > 0, 0, 1), alpha = abs(x ^ 4))
+          if(return_rgb) {
+            res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
+          }
+          return(res_col)
+        }
+        expressionlegend = Legend(at = c(signif(min(data[,"averageexpression"]), 4), signif(mean(data[,"averageexpression"]), 4), signif(max(data[,"averageexpression"]), 4)),
                                   grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = expressioncolorfun, title_position = "topleft", title = "Expression")
-        foldchangelegend = Legend(at = c(signif(-max(abs(data$foldchange))), 0, signif(max(abs(data$foldchange)))),
+        foldchangelegend = Legend(at = c(signif(-max(abs(data$foldchange)), 4), 0, signif(max(abs(data$foldchange)), 4)),
                                   grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = foldchangecolorfun, title_position = "topleft", title = "Fold Change")
+        linkvallegend = Legend(at = c(signif(min(linkvals), 4), 0, signif(max(linkvals), 4)),
+                                  grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = linkvalcolorfun, title_position = "topleft", title = "Correlation")
         circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
           tempregion = cbind(region$start - minwidth, region$end + minwidth)
           #weight = 1 - 1 / (1 + value$averageexpression * expressioncoefficient)
@@ -1820,13 +1821,16 @@ shinyServer(function(input, output, session) {
           circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = foldchangecolorfun(value$foldchange), border = NA)
           incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing foldchange", detail = CELL_META$sector.index)
         })
-        incProgress(amount = 0.2, message = paste("Graphing", nrow(linkvals), "links"))
-        bed1$"start" = bed1$"start" - minwidth * 4
-        bed1$"end" = bed1$"end" + minwidth * 4
-        bed2$"start" = bed2$"start" - minwidth * 4
-        bed2$"end" = bed2$"end" + minwidth * 4
-        circos.genomicLink(bed1, bed2, col = rgb(1, 0.5, 0, alpha = abs(linkvals ^ 5)), border = NA, w=0.8)
-        circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "Fold Change", facing = "downward", sector.index = "chr1")
+        incProgress(amount = 0.2, message = paste("Graphing", length(linkvals), "links"), detail = "")
+        bed1$"start" = bed1$"start" - minwidth
+        bed1$"end" = bed1$"end" + minwidth
+        bed2$"start" = bed2$"start" - minwidth
+        bed2$"end" = bed2$"end" + minwidth
+        #just trust these magic numbers below
+        rou1 = 0.6 - uy(sapply(bed1$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm") #number of sig for each chr
+        rou2 = 0.6 - uy(sapply(bed2$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm")
+        circos.genomicLink(bed1, bed2, col = linkvalcolorfun(linkvals), lwd = abs(linkvals) ^ 6 * 5, h.ratio = 0.7, rou1 = rou1, rou2 = rou2)
+        circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "FC", facing = "downward", sector.index = "chr1")
         for(chr in unique(data_sig[,"chr"])) { #text in the middle of the logfc bars and the miRNA ids
           data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
           data_sig_chr_region = data_sig_chr[,c("start", "end")]
@@ -1835,7 +1839,10 @@ shinyServer(function(input, output, session) {
         }
         
         circos.clear()
-        
+        pushViewport(viewport(x = 0.6, y = 0.9, width = 1, 
+                              height = unit(4, "mm"), just = c("right", "center")))
+        grid.draw(linkvallegend)
+        upViewport()
         pushViewport(viewport(x = 1.4, y = 0.1, width = 1, 
                               height = unit(4, "mm"), just = c("right", "center")))
         grid.draw(expressionlegend)
@@ -1844,6 +1851,7 @@ shinyServer(function(input, output, session) {
                               height = unit(4, "mm"), just = c("right", "center")))
         grid.draw(foldchangelegend)
         upViewport()
+        
       })
     }
   })
