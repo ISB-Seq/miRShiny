@@ -797,9 +797,55 @@ dashboardPage(skin="yellow",
                           )
                   ),
                   tabItem(tabName = "Genome",
-                          fluidRow(
-                            plotOutput("circularplot", width = "100%", height = "1000px")
+                        fluidRow(
+                          column(3,
+                            wellPanel(
+                              h4("Plot Parameters"),
+                              numericInput(
+                                inputId = "circlePlotBandWidthMult",
+                                label = "Band width multiplier",
+                                value = 1,
+                                min = 0.2,
+                                max = 5,
+                                step = 0.4
+                              ),
+                              numericInput(
+                                inputId = "circlePlotBandColorExp",
+                                label = "Band color exponent",
+                                value = 2,
+                                min = 1,
+                                max = 4,
+                                step = 1
+                              ),
+                              numericInput(
+                                inputId = "circlePlotLinkWidthMult",
+                                label = "Link width multiplier",
+                                value = 1,
+                                min = 0.2,
+                                max = 5,
+                                step = 0.4
+                              ),
+                              numericInput(
+                                inputId = "circlePlotLinkColorExp",
+                                label = "Link color exponent",
+                                value = 4,
+                                min = 1,
+                                max = 8,
+                                step = 1
+                              )
+                            ),
+                            wellPanel(
+                              actionButton(
+                                inputId = "circlePlotButton",
+                                label = "Update Plot",
+                                width = '100%'
+                              )
                             )
+                          ),
+                          column(9, 
+                                 plotOutput("circularplot", width = "100%", height = "1000px")
+                          )
+                        )
                   ),
                   tabItem(tabName = "Visualization",
                           fluidRow(
@@ -882,7 +928,7 @@ dashboardPage(skin="yellow",
                                 h4("File Downloads"),
                                 textInput(
                                   inputId = 'hmImageName',
-                                  label = 'Name for Heatmap Matrix File Download',
+                                  label = 'Name for Heatmap Plot File Download',
                                   value = "experimentName_heatmap",
                                   width = '75%'
                                 ),
@@ -895,6 +941,22 @@ dashboardPage(skin="yellow",
                                   width = '75%'
                                 ),
                                 downloadButton('downloadMatrix', 'Download'),
+                                HTML('<hr style = "width = 75%">'),
+                                textInput(
+                                  inputId = 'corrhmImageName',
+                                  label = 'Name for Correlation Heatmap Matrix File Download',
+                                  value = "experimentName_corrheatmap",
+                                  width = '75%'
+                                ),
+                                downloadButton('downloadCorrHM', 'Download'),
+                                HTML('<hr style = "width = 75%">'),
+                                textInput(
+                                  inputId = 'circularPlotImageName',
+                                  label = 'Name for Genomic Plot File Download',
+                                  value = "experimentName_genomvis",
+                                  width = '75%'
+                                ),
+                                downloadButton('downloadCircPlot', 'Download'),
                                 HTML('<hr style = "width = 75%">'),
                                 textInput(
                                   inputId = 'deName',

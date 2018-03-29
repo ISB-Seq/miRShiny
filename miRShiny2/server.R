@@ -8,6 +8,7 @@ library(reshape)
 library(viridis)
 library(sva)
 library(grid)
+library(gridBase) #remember to cite
 library(reader)
 library(NMF)
 library(plyr)
@@ -957,6 +958,10 @@ shinyServer(function(input, output, session) {
   })
   
   output$corrmap = renderPlot({
+    corrmapfile()
+  })
+  
+  corrmapfile = reactive({
     if(!is.null(topTableList()) && !is.null(storageValues$sig) && sum(storageValues$sig, na.rm = T) > 1){
       #print(rawElist()$E[rownames(topTableList()[storageValues$sig,]),]);
       cormat = cor(t(rawElist()$E[rownames(topTableList()[storageValues$sig,]),]), method = tolower(input$CCcalcType))
@@ -1007,16 +1012,8 @@ shinyServer(function(input, output, session) {
       return(NULL)
     }
     
-    if(input$dendClust==0){
-      rv <- NA
-      cv <- NA
-    } else if(input$dendClust==1){
-      rv <- NA
-      cv <- TRUE
-    } else{
-      rv <- TRUE
-      cv <- TRUE
-    }
+    rv = ifelse(input$dendClustR && nrow(topMatrix) > 1, T, NA)
+    cv = ifelse(input$dendClustC && ncol(topMatrix) > 1, T, NA)
     a <-
       aheatmap(
         E,
@@ -1403,6 +1400,27 @@ shinyServer(function(input, output, session) {
       write.csv(heatmapMatrixFile(), file)
     }
   )
+  output$downloadCorrHM = downloadHandler(
+    filename = function() {
+      paste0(input$corrhmImageName, ".png")
+    },
+    content = function(file) {
+      png(file, width = 1024, height = 1024)
+      print(corrmapfile())
+      dev.off()
+    }
+  )
+  output$downloadCircPlot = downloadHandler(
+    filename = function() {
+      paste0(input$circularPlotImageName, ".png")
+    },
+    content = function(file) {
+      png(file, width = 1024, height = 1024)
+      storageValues$newCirclePlot = 1 #to update the plot so it can actually print and be downloaded
+      circularplotfile()
+      dev.off()
+    }
+  )
   output$downloadDETab <- downloadHandler(
     filename = function() {
       paste(input$deName, '.csv', sep = '')
@@ -1685,8 +1703,21 @@ shinyServer(function(input, output, session) {
                                    caption.width = getOption("xtable.caption.width", NULL))
   output$powerTable5 = renderTable(if(!is.null(storageValues$numPowerCurves) && storageValues$numPowerCurves > 4){storageValues$powerTables[[5]]}else{NULL}, digits = 3, caption = "<b><h4>Power table 5</h4></b>", caption.placement = getOption("xtable.caption.placement", "top"),
                                    caption.width = getOption("xtable.caption.width", NULL))
-  
+  observeEvent(input$circlePlotButton, {
+    storageValues$circlePlotBandWidthMult = input$circlePlotBandWidthMult
+    storageValues$circlePlotBandColorExp = input$circlePlotBandColorExp
+    storageValues$circlePlotLinkWidthMult = input$circlePlotLinkWidthMult
+    storageValues$circlePlotLinkColorExp = input$circlePlotLinkColorExp
+  })
   output$circularplot = renderPlot({
+    storageValues$newCirclePlot = 0 #this is to make an update whenever u download
+    circularplotfile()
+  })
+  circularplotfile = reactive({
+    if(is.null(storageValues$circlePlotBandWidthMult)) {
+      return(NULL)
+    }
+    storageValues$newCirclePlot
     if(!is.null(topTableList()) && sum(storageValues$sig) > 0) {
       withProgress(message = "Mapping to Genome", value = 0.05, {
         #read file
@@ -1764,25 +1795,25 @@ shinyServer(function(input, output, session) {
                    "track.height" = 0.15)
         circos.initializeWithIdeogram(plotType = c("ideogram", "axis", "labels"))
         #a difference of 1000000 is barely enough to show up on screen
-        minwidth = 1200000
-        expressioncoefficient = 3 / max(data[,"averageexpression"]) #for calculating transparency
-        foldchangecoefficient = 3 / max(abs(data$foldchange))
+        minwidth = 1200000 * storageValues$circlePlotBandWidthMult
+        expressioncoefficient = 1 / max(data[,"averageexpression"]) #for calculating transparency
+        foldchangecoefficient = 1 / max(abs(data$foldchange))
         expressioncolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
-          res_col = rgb(0, 0.5, 0, alpha = 1 - 1 / (1 + (x * expressioncoefficient) ^ 2))
+          res_col = rgb(0, 0.5, 0, alpha = 1 - 1 / (1 + (x * expressioncoefficient) ^ storageValues$circlePlotBandColorExp))
           if(return_rgb) {
             res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
           }
           return(res_col)
         }
         foldchangecolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
-          res_col = rgb(0.5, 0, 0, alpha = 1 - 1 / (1 + abs(x * foldchangecoefficient) ^ 2))
+          res_col = rgb(0.5, 0, 0, alpha = 1 - 1 / (1 + abs(x * foldchangecoefficient) ^ storageValues$circlePlotBandColorExp))
           if(return_rgb) {
             res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
           }
           return(res_col)
         }
         linkvalcolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
-          res_col = rgb(ifelse(x > 0, 1, 0), 0.5, ifelse(x > 0, 0, 1), alpha = abs(x ^ 4))
+          res_col = rgb(ifelse(x > 0, 1, 0), 0.5, ifelse(x > 0, 0, 1), alpha = abs(x ^ storageValues$circlePlotLinkColorExp))
           if(return_rgb) {
             res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
           }
@@ -1829,7 +1860,7 @@ shinyServer(function(input, output, session) {
         #just trust these magic numbers below
         rou1 = 0.6 - uy(sapply(bed1$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm") #number of sig for each chr
         rou2 = 0.6 - uy(sapply(bed2$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm")
-        circos.genomicLink(bed1, bed2, col = linkvalcolorfun(linkvals), lwd = abs(linkvals) ^ 6 * 5, h.ratio = 0.7, rou1 = rou1, rou2 = rou2)
+        circos.genomicLink(bed1, bed2, col = linkvalcolorfun(linkvals), lwd = abs(linkvals) ^ 6 * storageValues$circlePlotLinkWidthMult, h.ratio = 0.7, rou1 = rou1, rou2 = rou2)
         circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "FC", facing = "downward", sector.index = "chr1")
         for(chr in unique(data_sig[,"chr"])) { #text in the middle of the logfc bars and the miRNA ids
           data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
@@ -1851,7 +1882,6 @@ shinyServer(function(input, output, session) {
                               height = unit(4, "mm"), just = c("right", "center")))
         grid.draw(foldchangelegend)
         upViewport()
-        
       })
     }
   })
