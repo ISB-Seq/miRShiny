@@ -858,7 +858,7 @@ dashboardPage(skin="yellow",
                                 selectInput(
                                   inputId = 'dePlotType',
                                   label = "Plot Type",
-                                  choices = c("Boxplot", "Violin Plot"),
+                                  choices = c("Boxplot", "Violin Plot", "Split Violin Plot"),
                                   selected = "Boxplot"
                                 ),
                                 conditionalPanel(
@@ -867,7 +867,7 @@ dashboardPage(skin="yellow",
                                   checkboxInput(inputId = "deDot", label = "Overlay Dotplot?", value = FALSE)
                                 ),
                                 conditionalPanel(
-                                  condition = "input.dePlotType == 'Violin Plot'",
+                                  condition = "input.dePlotType == 'Violin Plot' || input.dePlotType == 'Split Violin Plot'",
                                   checkboxInput(inputId = "deBox", label = "Overlay Boxplot", value = TRUE)
                                 ),
                                 HTML('<hr>'),

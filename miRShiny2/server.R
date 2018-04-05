@@ -8,7 +8,6 @@ library(reshape)
 library(viridis)
 library(sva)
 library(grid)
-library(gridBase) #remember to cite
 library(reader)
 library(NMF)
 library(plyr)
@@ -1494,13 +1493,19 @@ shinyServer(function(input, output, session) {
             if(input$deDot){
               p <- p + geom_dotplot(binaxis = "y", stackdir = "centerwhole", fill = "White", dotsize = 0.65)
             }
-          } else {
+          } else if(input$dePlotType == "Violin Plot") {
             #Violin Plot
             p <- ggplot(bpDF, aes(x = condition, y = values, fill = factor(condition))) + geom_violin() + xlab("Condition") + ylab("Normalized Expression Value") + labs(fill = "Condition")
             if(input$deBox){
               p <- p + geom_boxplot(width = 0.1, fill = "White")
             }
-          }
+          } else {
+            #Split Violin Plot
+            p <- ggplot(bpDF, aes(x = 0, y = values, fill = factor(condition))) + geom_split_violin() + xlab("Condition") + ylab("Normalized Expression Value") + labs(fill = "Condition")
+            if(input$deBox){
+              p <- p + geom_boxplot(width = 0.1, fill = "White")
+            }
+          } 
           incProgress(0.4, detail = "Applying facets ")
           plotColor(p+facet_wrap(~sample, scales = "free", ncol = ceiling(sqrt(length(selected)))) + theme(axis.title=element_text(size=14), axis.text=element_text(size=12)), input = input$miRplotColors, rev = input$miRcolorsRev, n = length(unique(condition)))
         })
@@ -1796,6 +1801,7 @@ shinyServer(function(input, output, session) {
         circos.initializeWithIdeogram(plotType = c("ideogram", "axis", "labels"))
         #a difference of 1000000 is barely enough to show up on screen
         minwidth = 1200000 * storageValues$circlePlotBandWidthMult
+        minlinkwidth = 1200000 * storageValues$circlePlotLinkWidthMult
         expressioncoefficient = 1 / max(data[,"averageexpression"]) #for calculating transparency
         foldchangecoefficient = 1 / max(abs(data$foldchange))
         expressioncolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
@@ -1853,14 +1859,14 @@ shinyServer(function(input, output, session) {
           incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing foldchange", detail = CELL_META$sector.index)
         })
         incProgress(amount = 0.2, message = paste("Graphing", length(linkvals), "links"), detail = "")
-        bed1$"start" = bed1$"start" - minwidth
-        bed1$"end" = bed1$"end" + minwidth
-        bed2$"start" = bed2$"start" - minwidth
-        bed2$"end" = bed2$"end" + minwidth
+        bed1$"start" = bed1$"start" - minlinkwidth
+        bed1$"end" = bed1$"end" + minlinkwidth
+        bed2$"start" = bed2$"start" - minlinkwidth
+        bed2$"end" = bed2$"end" + minlinkwidth
         #just trust these magic numbers below
         rou1 = 0.6 - uy(sapply(bed1$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm") #number of sig for each chr
         rou2 = 0.6 - uy(sapply(bed2$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm")
-        circos.genomicLink(bed1, bed2, col = linkvalcolorfun(linkvals), lwd = abs(linkvals) ^ 6 * storageValues$circlePlotLinkWidthMult, h.ratio = 0.7, rou1 = rou1, rou2 = rou2)
+        circos.genomicLink(bed1, bed2, col = linkvalcolorfun(linkvals), lwd = abs(linkvals) ^ 4 * storageValues$circlePlotLinkWidthMult, h.ratio = 0.7, rou1 = rou1, rou2 = rou2)
         circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "FC", facing = "downward", sector.index = "chr1")
         for(chr in unique(data_sig[,"chr"])) { #text in the middle of the logfc bars and the miRNA ids
           data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
@@ -2352,6 +2358,31 @@ shinyServer(function(input, output, session) {
       legend("bottomright", legend = legendEach, bty = "n", 
              text.col = col[1:length(result)], cex = cexLegend)
     }
+  }
+  
+  GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, draw_group = function(self, data, ..., draw_quantiles = NULL){
+    data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+    grp <- data[1,'group']
+    newdata <- plyr::arrange(transform(data, x = if(grp%%2==1) xminv else xmaxv), if(grp%%2==1) y else -y)
+    newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+    newdata[c(1,nrow(newdata)-1,nrow(newdata)), 'x'] <- round(newdata[1, 'x']) 
+    if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+      stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <= 
+                                                1))
+      quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
+      aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+      aesthetics$alpha <- rep(1, nrow(quantiles))
+      both <- cbind(quantiles, aesthetics)
+      quantile_grob <- GeomPath$draw_panel(both, ...)
+      ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+    }
+    else {
+      ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+    }
+  })
+  
+  geom_split_violin <- function (mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
+    layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, position = position, show.legend = show.legend, inherit.aes = inherit.aes, params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
   }
 })
 
