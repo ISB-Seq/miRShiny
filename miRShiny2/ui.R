@@ -12,6 +12,8 @@ library(reader)
 library(NMF)
 library(plyr)
 library(shinydashboard)
+library(plotly)
+library(heatmaply)
 
 fontSize = "font-size:150%"
 headerFontSize = "font-size:200%"
@@ -640,6 +642,7 @@ dashboardPage(skin="yellow",
                               9,
                               align = "center",
                               htmlOutput("upperPlotUI"),
+                              #plotlyOutput("upperPlotUI"),
                               HTML('<br>'),
                               htmlOutput("lowerPlotUI")
                             )
@@ -727,16 +730,18 @@ dashboardPage(skin="yellow",
                             column(
                               9,
                               align = "center",
-                              plotOutput("MAPlot", height = 400, width = '85%'),
+                              plotlyOutput("MAPlot", height = 400, width = '85%'),
                               HTML('<br>'),
                               HTML('<br>'),
-                              plotOutput("volcanoPlot", height = 400, width = '85%'),
+                              plotlyOutput("volcanoPlot", height = 400, width = '85%'),
                               HTML('<br>'),
                               HTML('<br>'),
                               div(tableOutput("sigMirTable"), style = "font-size:100%"),
                               HTML('<br>'),
                               HTML('<br>'),
                               htmlOutput("heatmapUI")
+                              #plotlyOutput("heatmapUI")
+            
                             )
                           )
                   ),

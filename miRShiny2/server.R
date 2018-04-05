@@ -14,6 +14,8 @@ library(plyr)
 library(RnaSeqSampleSize)
 library(circlize)
 library(openxlsx)
+library(plotly)
+library(heatmaply)
 #library(pwr)
 
 #######
@@ -549,6 +551,7 @@ shinyServer(function(input, output) {
       return(m)
     }, include.colnames = TRUE, include.rownames = FALSE)
   
+  #changed renderPlot to renderPlotly
   output$upperQCPlot <- renderPlot({
     #dont plot until button has been pushed
     if (input$plotQC==0) {
@@ -602,7 +605,7 @@ shinyServer(function(input, output) {
               x = paste("PC1 (", pVar[1], "%)"),
               y = paste("PC2 (", pVar[2], "%)"),
               colour = input$sortPCA
-            ) 
+            )
             
             incProgress(0.25, detail = "Applying facets")
             if(input$pcaType == "PC1/PC2"){
@@ -735,6 +738,11 @@ shinyServer(function(input, output) {
               lab <- "Sample Number"
               p <- plotOrderBoxplot(E = E, title = t, lab = lab, cont = TRUE)
               print(p)
+
+              # lab <- "Sample Number"
+              # p <- ggplotly(plotOrderBoxplot(E = E, title = t, lab = lab, cont = TRUE))
+              # print(p)
+
             } else{
               if(input$sortBox == 'Condition'){
                 lab <- "Condition"
@@ -806,7 +814,7 @@ shinyServer(function(input, output) {
     })
   })
   
-  output$MAPlot <- renderPlot({
+  output$MAPlot <- renderPlotly({
     if(!is.null(topTableList())){
       if(is.null(input$condition1)){
         return(NULL)
@@ -822,7 +830,7 @@ shinyServer(function(input, output) {
         
         incProgress(0.333, detail = "Plotting MA Values")
         MAplot <-
-          ggplot(mirlist, aes(
+          ggplotly(ggplot(mirlist, aes(
             x = AveExpr,
             y = logFC,
             colour = threshold
@@ -831,7 +839,7 @@ shinyServer(function(input, output) {
           ylab("M (Log2FC)") + xlab("A (Average Expression)") +
           ggtitle("M vs A (Log2FC vs. Average Expression)") +
           scale_color_manual(values = c("#8c8c8c", "#ff0000")) +
-          geom_vline(xintercept = input$AveEcut, color = "Red")
+          geom_vline(xintercept = input$AveEcut, color = "Red"))
       })
       return(MAplot)
     }
@@ -841,7 +849,7 @@ shinyServer(function(input, output) {
   })
   
   #create volcano plot
-  output$volcanoPlot <- renderPlot({
+  output$volcanoPlot <- renderPlotly({
     if(!is.null(topTableList())){
       if(is.null(input$condition1)){
         return(NULL)
@@ -857,7 +865,7 @@ shinyServer(function(input, output) {
         
         incProgress(0.333, detail = "Plotting features")
         vplot <-
-          ggplot(mirlist, aes(
+          ggplotly(ggplot(mirlist, aes(
             x = logFC,
             y = -log10(P.Value),
             colour = threshold
@@ -869,7 +877,7 @@ shinyServer(function(input, output) {
           scale_color_manual(values = c("#8c8c8c", "#ff0000")) +
           geom_vline(xintercept = log2(input$logFCcut), color = "Red") +
           geom_vline(xintercept = -log2(input$logFCcut), color = "Red") +
-          geom_abline(intercept = -log10(input$pValCut), slope = 0, color = "Red") 
+          geom_abline(intercept = -log10(input$pValCut), slope = 0, color = "Red") )
       })
       return(vplot)
     }
@@ -877,7 +885,7 @@ shinyServer(function(input, output) {
       return(NULL)
     }
   })
-  
+
   output$heatmap <- renderPlot({
     if(!is.null(topTableList())){
       
@@ -1233,6 +1241,10 @@ shinyServer(function(input, output) {
     plotOutput("upperQCPlot", width = w, height = h)
   })
   
+  # output$upperPlotUI <- renderPlotly({
+  #   ggplotly()
+  # })
+  
   output$lowerPlotUI <- renderUI({
     input$plotQC
       if(input$plotType == 'Boxplot'){
@@ -1336,7 +1348,8 @@ shinyServer(function(input, output) {
     )
   })
   
-  output$heatmapUI <- renderUI({
+  #changed renderUI to renderPlotly
+  output$heatmapUI <- renderPlotly({
     if(!is.null(processedElist())&&!is.null(topTableList())){
       
       mirlist <- topTableList()
@@ -1367,7 +1380,14 @@ shinyServer(function(input, output) {
       }
       storageValues$hmW <- w
       storageValues$hmH <- h
-      return(plotOutput("heatmap", width = w, height = h))
+      #changed plotOutput to heatmaply
+      #return(plotOutput("heatmap", width = w, height = h))
+      #return(heatmaply("heatmap", width = w, height = h))
+      #return(plotOutput("heatmap"))
+      # return(heatmaply(mtcars))
+      return(heatmaply(storageValues$hmMatrix))
+      
+      #PLACEKEEPER
     }
     else{
       return(NULL)
