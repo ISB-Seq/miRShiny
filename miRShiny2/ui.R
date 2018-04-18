@@ -801,6 +801,12 @@ dashboardPage(skin="yellow",
                           column(3,
                             wellPanel(
                               h4("Plot Parameters"),
+                              selectInput(
+                                inputId = "genomicPlotType",
+                                label = "Plot Type",
+                                choices = c("Circular", "Barchart"),
+                                selected = "Circular"
+                              ),
                               numericInput(
                                 inputId = "circlePlotBandWidthMult",
                                 label = "Band width multiplier",
@@ -817,21 +823,24 @@ dashboardPage(skin="yellow",
                                 max = 4,
                                 step = 1
                               ),
-                              numericInput(
-                                inputId = "circlePlotLinkWidthMult",
-                                label = "Link width multiplier",
-                                value = 1,
-                                min = 0.2,
-                                max = 5,
-                                step = 0.4
-                              ),
-                              numericInput(
-                                inputId = "circlePlotLinkColorExp",
-                                label = "Link color exponent",
-                                value = 4,
-                                min = 1,
-                                max = 8,
-                                step = 1
+                              conditionalPanel(
+                                condition = "input.genomicPlotType == 'Circular'",
+                                numericInput(
+                                  inputId = "circlePlotLinkWidthMult",
+                                  label = "Link width multiplier",
+                                  value = 1,
+                                  min = 0.2,
+                                  max = 5,
+                                  step = 0.4
+                                ),
+                                numericInput(
+                                  inputId = "circlePlotLinkColorExp",
+                                  label = "Link color exponent",
+                                  value = 4,
+                                  min = 1,
+                                  max = 8,
+                                  step = 1
+                                )
                               )
                             ),
                             wellPanel(

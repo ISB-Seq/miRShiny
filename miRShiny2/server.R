@@ -1727,7 +1727,7 @@ shinyServer(function(input, output, session) {
       withProgress(message = "Mapping to Genome", value = 0.05, {
         #read file
         #mblistfile = system.file("HGNC_miRBase_list(20160323)curated.xlsx", package = "openxlsx")
-        mblist = read.xlsx(xlsxFile = "HGNC_miRBase_list(20160323)curated.xlsx", sheet = 1)
+        mblist = read.csv(file = "ordered_miRBase_list.csv", header = TRUE, check.names = FALSE)
         maplist = read.xlsx(xlsxFile = "human_miRNA_name_mapping(2017-07-28).xlsx", sheet = 1)
        
         #get names n vals
@@ -1859,14 +1859,16 @@ shinyServer(function(input, output, session) {
           incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing foldchange", detail = CELL_META$sector.index)
         })
         incProgress(amount = 0.2, message = paste("Graphing", length(linkvals), "links"), detail = "")
-        bed1$"start" = bed1$"start" - minlinkwidth
-        bed1$"end" = bed1$"end" + minlinkwidth
-        bed2$"start" = bed2$"start" - minlinkwidth
-        bed2$"end" = bed2$"end" + minlinkwidth
-        #just trust these magic numbers below
-        rou1 = 0.6 - uy(sapply(bed1$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm") #number of sig for each chr
-        rou2 = 0.6 - uy(sapply(bed2$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm")
-        circos.genomicLink(bed1, bed2, col = linkvalcolorfun(linkvals), lwd = abs(linkvals) ^ 4 * storageValues$circlePlotLinkWidthMult, h.ratio = 0.7, rou1 = rou1, rou2 = rou2)
+        if(storageValues$circlePlotLinkWidthMult != 0) {
+          bed1$"start" = bed1$"start" - minlinkwidth
+          bed1$"end" = bed1$"end" + minlinkwidth
+          bed2$"start" = bed2$"start" - minlinkwidth
+          bed2$"end" = bed2$"end" + minlinkwidth
+          #just trust these magic numbers below
+          rou1 = 0.6 - uy(sapply(bed1$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm") #number of sig for each chr
+          rou2 = 0.6 - uy(sapply(bed2$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm")
+          circos.genomicLink(bed1, bed2, col = linkvalcolorfun(linkvals), lwd = abs(linkvals) ^ 4 * storageValues$circlePlotLinkWidthMult, h.ratio = 0.7, rou1 = rou1, rou2 = rou2)
+        }
         circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "FC", facing = "downward", sector.index = "chr1")
         for(chr in unique(data_sig[,"chr"])) { #text in the middle of the logfc bars and the miRNA ids
           data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
