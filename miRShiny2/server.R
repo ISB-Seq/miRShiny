@@ -1768,40 +1768,18 @@ shinyServer(function(input, output, session) {
         map_chr = mblist[mb_match, "Chromosome"] #map chromosome info from mirbaselist to maplist
         map_gstart = mblist[mb_match, "Gene.Start.(bp)"]
         map_gend = mblist[mb_match, "Gene.End.(bp)"]
-        map_use = cbind(map_use, map_chr, map_gstart, map_gend) #attach chromosome info
+        map_no = mblist[mb_match, "NO"]
+        map_use = cbind(map_use, map_chr, map_gstart, map_gend, map_no) #attach chromosome info
         #mb_use = mblist[mb_match,]
         
         setProgress(value = 0.1, message = "Preparing to graph")
         #prepare to graph
-        data = map_use[!is.na(map_use[,"map_val"]),c("map_chr", "map_gstart","map_gend","map_val", "map_expr", "map_sig", "unifiedName")]
+        data = map_use[!is.na(map_use[,"map_val"]),c("map_chr", "map_gstart","map_gend","map_val", "map_expr", "map_sig", "unifiedName", "map_no")]
         data[,"map_chr"] = paste("chr", data[,"map_chr"], sep = "")
-        colnames(data) = c("chr", "start", "end", "foldchange", "averageexpression", "sig", "id")
+        colnames(data) = c("chr", "start", "end", "foldchange", "averageexpression", "sig", "id", "no")
         rownames(data) = 1:nrow(data)
         data_sig = data[data[,"sig"],]
         
-        #set up the dataframes to create links
-        bedstart1 = regexpr(":", storageValues$sigcor.m$X1) + 1
-        bedstart2 = regexpr(":", storageValues$sigcor.m$X2) + 1
-        bednames1 = substr(storageValues$sigcor.m$X1, bedstart1, 1000)
-        bednames2 = substr(storageValues$sigcor.m$X2, bedstart2, 1000)
-        mirbed1_match = match(bednames1, names, nomatch = NA)
-        mirbed2_match = match(bednames2, names, nomatch = NA)
-        mapbed1_match = match(maplist[map_match[mirbed1_match],]$"unifiedName", data_sig$"id", nomatch = NA)
-        mapbed2_match = match(maplist[map_match[mirbed2_match],]$"unifiedName", data_sig$"id", nomatch = NA)
-        bed1 = data_sig[mapbed1_match, c("chr", "start", "end")]
-        bed2 = data_sig[mapbed2_match, c("chr", "start", "end")]
-        linkuse = !is.na(mapbed1_match) & !is.na(mapbed2_match) & !(bednames1 == bednames2)
-        bed1 = bed1[linkuse,]
-        bed2 = bed2[linkuse,]
-        linkvals = storageValues$sigcor.m$value[linkuse]
-        
-        
-        circos.par("start.degree" = 0, "gap.degree" = c(rep(5,8), 9, rep(5,14), 5),
-                   "track.height" = 0.15)
-        circos.initializeWithIdeogram(plotType = c("ideogram", "axis", "labels"))
-        #a difference of 1000000 is barely enough to show up on screen
-        minwidth = 1200000 * storageValues$circlePlotBandWidthMult
-        minlinkwidth = 1200000 * storageValues$circlePlotLinkWidthMult
         expressioncoefficient = 1 / max(data[,"averageexpression"]) #for calculating transparency
         foldchangecoefficient = 1 / max(abs(data$foldchange))
         expressioncolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
@@ -1818,78 +1796,148 @@ shinyServer(function(input, output, session) {
           }
           return(res_col)
         }
-        linkvalcolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
-          res_col = rgb(ifelse(x > 0, 1, 0), 0.5, ifelse(x > 0, 0, 1), alpha = abs(x ^ storageValues$circlePlotLinkColorExp))
-          if(return_rgb) {
-            res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
+        isolate({
+          if(input$genomicPlotType == "Circular") {
+            
+            
+            #set up the dataframes to create links
+            bedstart1 = regexpr(":", storageValues$sigcor.m$X1) + 1
+            bedstart2 = regexpr(":", storageValues$sigcor.m$X2) + 1
+            bednames1 = substr(storageValues$sigcor.m$X1, bedstart1, 1000)
+            bednames2 = substr(storageValues$sigcor.m$X2, bedstart2, 1000)
+            mirbed1_match = match(bednames1, names, nomatch = NA)
+            mirbed2_match = match(bednames2, names, nomatch = NA)
+            mapbed1_match = match(maplist[map_match[mirbed1_match],]$"unifiedName", data_sig$"id", nomatch = NA)
+            mapbed2_match = match(maplist[map_match[mirbed2_match],]$"unifiedName", data_sig$"id", nomatch = NA)
+            bed1 = data_sig[mapbed1_match, c("chr", "start", "end")]
+            bed2 = data_sig[mapbed2_match, c("chr", "start", "end")]
+            linkuse = !is.na(mapbed1_match) & !is.na(mapbed2_match) & !(bednames1 == bednames2)
+            bed1 = bed1[linkuse,]
+            bed2 = bed2[linkuse,]
+            linkvals = storageValues$sigcor.m$value[linkuse]
+            
+            
+            circos.par("start.degree" = 0, "gap.degree" = c(rep(5,8), 9, rep(5,14), 5),
+                       "track.height" = 0.15)
+            circos.initializeWithIdeogram(plotType = c("ideogram", "axis", "labels"))
+            #a difference of 1000000 is barely enough to show up on screen
+            minwidth = 1200000 * storageValues$circlePlotBandWidthMult
+            minlinkwidth = 1200000 * storageValues$circlePlotLinkWidthMult
+            linkvalcolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
+              res_col = rgb(ifelse(x > 0, 1, 0), 0.5, ifelse(x > 0, 0, 1), alpha = abs(x ^ storageValues$circlePlotLinkColorExp))
+              if(return_rgb) {
+                res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
+              }
+              return(res_col)
+            }
+            expressionlegend = Legend(at = c(signif(min(data[,"averageexpression"]), 4), signif(mean(data[,"averageexpression"]), 4), signif(max(data[,"averageexpression"]), 4)),
+                                      grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = expressioncolorfun, title_position = "topleft", title = "Expression")
+            foldchangelegend = Legend(at = c(signif(-max(abs(data$foldchange)), 4), 0, signif(max(abs(data$foldchange)), 4)),
+                                      grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = foldchangecolorfun, title_position = "topleft", title = "Fold Change")
+            linkvallegend = Legend(at = c(signif(min(linkvals), 4), 0, signif(max(linkvals), 4)),
+                                      grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = linkvalcolorfun, title_position = "topleft", title = "Correlation")
+            circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
+              tempregion = cbind(region$start - minwidth, region$end + minwidth)
+              #weight = 1 - 1 / (1 + value$averageexpression * expressioncoefficient)
+              ytop = rep(0.9, nrow(region))
+              ytop[value$sig] = 1.1
+              ybottom = rep(0.1, nrow(region))
+              ybottom[value$sig] = -0.1
+              circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = expressioncolorfun(value$averageexpression), border = NA)
+              incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing average expression", detail = CELL_META$sector.index)
+            })
+            circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "Avg. Expr.", facing = "downward", sector.index = "chr1")
+            for(chr in unique(data_sig[,"chr"])) { #the text in the middle of the ave expr bars
+              data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
+              data_sig_chr_region = data_sig_chr[,c("start", "end")]
+              #yeah just trust this little piece of code below
+              circos.genomicText(data_sig_chr_region, NULL, 0.5 + uy(seq(-1.5 + nrow(data_sig_chr) * 1.5, 1.5 + nrow(data_sig_chr) * -1.5, length.out = nrow(data_sig_chr)),"mm"), labels = round(data_sig_chr[,"averageexpression"],2), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
+            }
+            circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
+              tempregion = cbind(region$start - minwidth, region$end + minwidth)
+              #weight = 1 - 1 / (1 + abs(value$foldchange * foldchangecoefficient) ^ 2)
+              ytop = rep(0.9, nrow(region))
+              ytop[value$sig] = 1.1
+              ybottom = rep(0.1, nrow(region))
+              ybottom[value$sig] = -0.1
+              circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = foldchangecolorfun(value$foldchange), border = NA)
+              incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing foldchange", detail = CELL_META$sector.index)
+            })
+            incProgress(amount = 0.2, message = paste("Graphing", length(linkvals), "links"), detail = "")
+            if(storageValues$circlePlotLinkWidthMult != 0) {
+              bed1$"start" = bed1$"start" - minlinkwidth
+              bed1$"end" = bed1$"end" + minlinkwidth
+              bed2$"start" = bed2$"start" - minlinkwidth
+              bed2$"end" = bed2$"end" + minlinkwidth
+              #just trust these magic numbers below
+              rou1 = 0.6 - uy(sapply(bed1$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm") #number of sig for each chr
+              rou2 = 0.6 - uy(sapply(bed2$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm")
+              circos.genomicLink(bed1, bed2, col = linkvalcolorfun(linkvals), lwd = abs(linkvals) ^ 4 * storageValues$circlePlotLinkWidthMult, h.ratio = 0.7, rou1 = rou1, rou2 = rou2)
+            }
+            circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "FC", facing = "downward", sector.index = "chr1")
+            for(chr in unique(data_sig[,"chr"])) { #text in the middle of the logfc bars and the miRNA ids
+              data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
+              data_sig_chr_region = data_sig_chr[,c("start", "end")]
+              circos.genomicText(data_sig_chr_region, NULL, 0.5 + uy(seq(-1.5 + nrow(data_sig_chr) * 1.5, 1.5 + nrow(data_sig_chr) * -1.5, length.out = nrow(data_sig_chr)),"mm"), labels = round(data_sig_chr[,"foldchange"],2), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
+              circos.genomicText(data_sig_chr_region, NULL, uy(seq(-3, nrow(data_sig_chr) * -3, length.out = nrow(data_sig_chr)),"mm"), labels = substr(data_sig_chr[,"id"], 5, 1000), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
+            }
+            
+            circos.clear()
+            pushViewport(viewport(x = 0.6, y = 0.9, width = 1, 
+                                  height = unit(4, "mm"), just = c("right", "center")))
+            grid.draw(linkvallegend)
+            upViewport()
+            pushViewport(viewport(x = 1.4, y = 0.1, width = 1, 
+                                  height = unit(4, "mm"), just = c("right", "center")))
+            grid.draw(expressionlegend)
+            upViewport()
+            pushViewport(viewport(x = unit(1.4, "npc"), y = 0.9, width = 1, 
+                                  height = unit(4, "mm"), just = c("right", "center")))
+            grid.draw(foldchangelegend)
+            upViewport()
           }
-          return(res_col)
-        }
-        expressionlegend = Legend(at = c(signif(min(data[,"averageexpression"]), 4), signif(mean(data[,"averageexpression"]), 4), signif(max(data[,"averageexpression"]), 4)),
-                                  grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = expressioncolorfun, title_position = "topleft", title = "Expression")
-        foldchangelegend = Legend(at = c(signif(-max(abs(data$foldchange)), 4), 0, signif(max(abs(data$foldchange)), 4)),
-                                  grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = foldchangecolorfun, title_position = "topleft", title = "Fold Change")
-        linkvallegend = Legend(at = c(signif(min(linkvals), 4), 0, signif(max(linkvals), 4)),
-                                  grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = linkvalcolorfun, title_position = "topleft", title = "Correlation")
-        circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
-          tempregion = cbind(region$start - minwidth, region$end + minwidth)
-          #weight = 1 - 1 / (1 + value$averageexpression * expressioncoefficient)
-          ytop = rep(0.9, nrow(region))
-          ytop[value$sig] = 1.1
-          ybottom = rep(0.1, nrow(region))
-          ybottom[value$sig] = -0.1
-          circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = expressioncolorfun(value$averageexpression), border = NA)
-          incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing average expression", detail = CELL_META$sector.index)
+          else
+          {
+            maxwidth = 400
+            chrspacing = 100
+            barheight = 10
+            linespacing = 10
+            
+            xmins = numeric()
+            xmaxs = numeric()
+            ymins = numeric()
+            ymaxs = numeric()
+            colors = NULL
+            alphas = numeric()
+            currx = 0
+            curry = 0
+            for(chr in unique(mblist[,"Chromosome"])) {
+              relevantmirs = data[substr(data[,"chr"], 4, 1000) == chr,]
+              if(currx + nrow(relevantmirs) > maxwidth) {
+                currx = 0
+                curry = curry - linespacing - barheight
+              }
+              if(nrow(relevantmirs) > 0) {
+                for(i in 1:nrow(relevantmirs)) {
+                  if(!is.na(relevantmirs[i, "no"])) {
+                    xmins = c(xmins, currx + relevantmirs[i, "no"])
+                    xmaxs = c(xmaxs, currx + relevantmirs[i, "no"] + 1)
+                    ymins = c(ymins, curry)
+                    ymaxs = c(ymaxs, curry - barheight)
+                    colors = c(colors, foldchangecolorfun(relevantmirs[i,"foldchange"], T))
+                    alphas = c(alphas, 1 - 1 / (1 + (relevantmirs[i,"foldchange"] * expressioncoefficient) ^ storageValues$circlePlotBandColorExp))
+                  }
+                }
+              }
+              currx = currx + nrow(relevantmirs) + chrspacing
+            }
+            df = data.frame(xmins, xmaxs, ymins, ymaxs, colors, alphas)
+            p = ggplot(df) + geom_rect(aes(xmin = xmins, ymin = ymins, xmax = xmaxs, ymax = ymaxs, 
+                                           fill = colors, alpha = alphas))
+            print(p)
+            #print the ggplot
+          }
         })
-        circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "Avg. Expr.", facing = "downward", sector.index = "chr1")
-        for(chr in unique(data_sig[,"chr"])) { #the text in the middle of the ave expr bars
-          data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
-          data_sig_chr_region = data_sig_chr[,c("start", "end")]
-          #yeah just trust this little piece of code below
-          circos.genomicText(data_sig_chr_region, NULL, 0.5 + uy(seq(-1.5 + nrow(data_sig_chr) * 1.5, 1.5 + nrow(data_sig_chr) * -1.5, length.out = nrow(data_sig_chr)),"mm"), labels = round(data_sig_chr[,"averageexpression"],2), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
-        }
-        circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
-          tempregion = cbind(region$start - minwidth, region$end + minwidth)
-          #weight = 1 - 1 / (1 + abs(value$foldchange * foldchangecoefficient) ^ 2)
-          ytop = rep(0.9, nrow(region))
-          ytop[value$sig] = 1.1
-          ybottom = rep(0.1, nrow(region))
-          ybottom[value$sig] = -0.1
-          circos.genomicRect(tempregion, ytop = ytop, ybottom = ybottom, col = foldchangecolorfun(value$foldchange), border = NA)
-          incProgress(amount = 0.35/nrow(data) * nrow(value), message = "Graphing foldchange", detail = CELL_META$sector.index)
-        })
-        incProgress(amount = 0.2, message = paste("Graphing", length(linkvals), "links"), detail = "")
-        if(storageValues$circlePlotLinkWidthMult != 0) {
-          bed1$"start" = bed1$"start" - minlinkwidth
-          bed1$"end" = bed1$"end" + minlinkwidth
-          bed2$"start" = bed2$"start" - minlinkwidth
-          bed2$"end" = bed2$"end" + minlinkwidth
-          #just trust these magic numbers below
-          rou1 = 0.6 - uy(sapply(bed1$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm") #number of sig for each chr
-          rou2 = 0.6 - uy(sapply(bed2$"chr", function(x, y) sum(x == y), data_sig[,"chr"]) * 0.37 + 0.15, "mm")
-          circos.genomicLink(bed1, bed2, col = linkvalcolorfun(linkvals), lwd = abs(linkvals) ^ 4 * storageValues$circlePlotLinkWidthMult, h.ratio = 0.7, rou1 = rou1, rou2 = rou2)
-        }
-        circos.text(CELL_META$xlim[1] - ux(3, "mm"), CELL_META$ycenter, labels = "FC", facing = "downward", sector.index = "chr1")
-        for(chr in unique(data_sig[,"chr"])) { #text in the middle of the logfc bars and the miRNA ids
-          data_sig_chr = data_sig[data_sig[,"chr"] == chr,]
-          data_sig_chr_region = data_sig_chr[,c("start", "end")]
-          circos.genomicText(data_sig_chr_region, NULL, 0.5 + uy(seq(-1.5 + nrow(data_sig_chr) * 1.5, 1.5 + nrow(data_sig_chr) * -1.5, length.out = nrow(data_sig_chr)),"mm"), labels = round(data_sig_chr[,"foldchange"],2), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
-          circos.genomicText(data_sig_chr_region, NULL, uy(seq(-3, nrow(data_sig_chr) * -3, length.out = nrow(data_sig_chr)),"mm"), labels = substr(data_sig_chr[,"id"], 5, 1000), cex = 0.85, facing = "outside", niceFacing = T, sector.index = chr)
-        }
-        
-        circos.clear()
-        pushViewport(viewport(x = 0.6, y = 0.9, width = 1, 
-                              height = unit(4, "mm"), just = c("right", "center")))
-        grid.draw(linkvallegend)
-        upViewport()
-        pushViewport(viewport(x = 1.4, y = 0.1, width = 1, 
-                              height = unit(4, "mm"), just = c("right", "center")))
-        grid.draw(expressionlegend)
-        upViewport()
-        pushViewport(viewport(x = unit(1.4, "npc"), y = 0.9, width = 1, 
-                              height = unit(4, "mm"), just = c("right", "center")))
-        grid.draw(foldchangelegend)
-        upViewport()
       })
     }
   })
