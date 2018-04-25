@@ -1796,7 +1796,7 @@ shinyServer(function(input, output, session) {
           }
           return(res_col)
         }
-        isolate({
+        #isolate({
           if(input$genomicPlotType == "Circular") {
             
             
@@ -1901,22 +1901,34 @@ shinyServer(function(input, output, session) {
             maxwidth = 400
             chrspacing = 100
             barheight = 10
-            linespacing = 10
+            headerheight = 3
+            linespacing = 12
             
             xmins = numeric()
             xmaxs = numeric()
             ymins = numeric()
             ymaxs = numeric()
-            colors = NULL
+            barxmins = numeric()
+            barxmaxs = numeric()
+            barymins = numeric()
+            barymaxs = numeric()
+            colors = character()
             alphas = numeric()
             currx = 0
             curry = 0
+            alphafun = function(val = 0) {
+              1 - 1 / (1 + (val * expressioncoefficient) ^ storageValues$circlePlotBandColorExp)
+            }
             for(chr in unique(mblist[,"Chromosome"])) {
               relevantmirs = data[substr(data[,"chr"], 4, 1000) == chr,]
               if(currx + nrow(relevantmirs) > maxwidth) {
                 currx = 0
                 curry = curry - linespacing - barheight
               }
+              barxmins = c(barxmins, currx)
+              barxmaxs = c(barxmaxs, currx + sum(mblist[,"Chromosome"] == chr))
+              barymins = c(barymins, curry + headerheight)
+              barymaxs = c(barymaxs, curry)
               if(nrow(relevantmirs) > 0) {
                 for(i in 1:nrow(relevantmirs)) {
                   if(!is.na(relevantmirs[i, "no"])) {
@@ -1924,20 +1936,22 @@ shinyServer(function(input, output, session) {
                     xmaxs = c(xmaxs, currx + relevantmirs[i, "no"] + 1)
                     ymins = c(ymins, curry)
                     ymaxs = c(ymaxs, curry - barheight)
-                    colors = c(colors, foldchangecolorfun(relevantmirs[i,"foldchange"], T))
-                    alphas = c(alphas, 1 - 1 / (1 + (relevantmirs[i,"foldchange"] * expressioncoefficient) ^ storageValues$circlePlotBandColorExp))
+                    colors = c(colors, "bar")
+                    alphas = c(alphas, alphafun(relevantmirs[i,"foldchange"]))
                   }
                 }
               }
-              currx = currx + nrow(relevantmirs) + chrspacing
+              currx = currx + sum(mblist[,"Chromosome"] == chr) + chrspacing
             }
             df = data.frame(xmins, xmaxs, ymins, ymaxs, colors, alphas)
+            df2 = data.frame(barxmins, barxmaxs, barymins, barymaxs)
             p = ggplot(df) + geom_rect(aes(xmin = xmins, ymin = ymins, xmax = xmaxs, ymax = ymaxs, 
-                                           fill = colors, alpha = alphas))
+                                           fill = colors, alpha = alphas)) + scale_fill_manual(values = c(bar = "#800000", header = alpha("#808080", 0.5)))
+            p = p + geom_rect(data = df2, mapping = aes(xmin = barxmins, ymin = barymins, xmax = barxmaxs, ymax = barymaxs, fill = "header"))
             print(p)
             #print the ggplot
           }
-        })
+        #})
       })
     }
   })
