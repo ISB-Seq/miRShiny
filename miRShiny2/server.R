@@ -1782,19 +1782,11 @@ shinyServer(function(input, output, session) {
         
         expressioncoefficient = 1 / max(data[,"averageexpression"]) #for calculating transparency
         foldchangecoefficient = 1 / max(abs(data$foldchange))
-        expressioncolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
-          res_col = rgb(0, 0.5, 0, alpha = 1 - 1 / (1 + (x * expressioncoefficient) ^ storageValues$circlePlotBandColorExp))
-          if(return_rgb) {
-            res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
-          }
-          return(res_col)
+        expressionalphafun = function(val = 0) {
+          1 - 1 / (1 + (val * expressioncoefficient) ^ storageValues$circlePlotBandColorExp)
         }
-        foldchangecolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
-          res_col = rgb(0.5, 0, 0, alpha = 1 - 1 / (1 + abs(x * foldchangecoefficient) ^ storageValues$circlePlotBandColorExp))
-          if(return_rgb) {
-            res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
-          }
-          return(res_col)
+        foldchangealphafun = function(val = 0) {
+          1 - 1 / (1 + abs(val * foldchangecoefficient) ^ storageValues$circlePlotBandColorExp)
         }
         #isolate({
           if(input$genomicPlotType == "Circular") {
@@ -1823,6 +1815,20 @@ shinyServer(function(input, output, session) {
             #a difference of 1000000 is barely enough to show up on screen
             minwidth = 1200000 * storageValues$circlePlotBandWidthMult
             minlinkwidth = 1200000 * storageValues$circlePlotLinkWidthMult
+            expressioncolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
+              res_col = rgb(0, 0.5, 0, alpha = expressionalphafun(x))
+              if(return_rgb) {
+                res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
+              }
+              return(res_col)
+            }
+            foldchangecolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
+              res_col = rgb(0.5, 0, 0, alpha = foldchangealphafun(x))
+              if(return_rgb) {
+                res_col = t(col2rgb(as.vector(res_col), alpha = TRUE)/255)
+              }
+              return(res_col)
+            }
             linkvalcolorfun = function(x = NULL, return_rgb = FALSE, max_value = 1) {
               res_col = rgb(ifelse(x > 0, 1, 0), 0.5, ifelse(x > 0, 0, 1), alpha = abs(x ^ storageValues$circlePlotLinkColorExp))
               if(return_rgb) {
@@ -1838,7 +1844,6 @@ shinyServer(function(input, output, session) {
                                       grid_height = unit(15, "mm"), grid_width = unit(10, "mm"), col_fun = linkvalcolorfun, title_position = "topleft", title = "Correlation")
             circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
               tempregion = cbind(region$start - minwidth, region$end + minwidth)
-              #weight = 1 - 1 / (1 + value$averageexpression * expressioncoefficient)
               ytop = rep(0.9, nrow(region))
               ytop[value$sig] = 1.1
               ybottom = rep(0.1, nrow(region))
@@ -1855,7 +1860,6 @@ shinyServer(function(input, output, session) {
             }
             circos.genomicTrackPlotRegion(data, ylim = c(0, 1), bg.border = NA, track.height = 0.15, panel.fun = function(region, value, ...) {
               tempregion = cbind(region$start - minwidth, region$end + minwidth)
-              #weight = 1 - 1 / (1 + abs(value$foldchange * foldchangecoefficient) ^ 2)
               ytop = rep(0.9, nrow(region))
               ytop[value$sig] = 1.1
               ybottom = rep(0.1, nrow(region))
@@ -1898,56 +1902,90 @@ shinyServer(function(input, output, session) {
           }
           else
           {
-            maxwidth = 400
-            chrspacing = 100
+            maxwidth = 500 / storageValues$circlePlotBandWidthMult
+            chrspacing = 80 / (storageValues$circlePlotBandWidthMult + 1) #shhh dont say anything
             barheight = 10
-            headerheight = 3
-            linespacing = 12
+            headerheight = 2
+            linespacing = 4
+            textspacing = 2
             
             xmins = numeric()
             xmaxs = numeric()
             ymins = numeric()
             ymaxs = numeric()
-            barxmins = numeric()
-            barxmaxs = numeric()
-            barymins = numeric()
-            barymaxs = numeric()
+            headerxmins = numeric()
+            headerxmaxs = numeric()
+            headerymins = numeric()
+            headerymaxs = numeric()
+            headerlabels = numeric()
+            sigxs = numeric()
+            sigys = numeric()
+            siglabels = character()
             colors = character()
             alphas = numeric()
             currx = 0
             curry = 0
-            alphafun = function(val = 0) {
-              1 - 1 / (1 + (val * expressioncoefficient) ^ storageValues$circlePlotBandColorExp)
+            maxlinesigoff = 0
+            numrows = 1
+            for(chr in unique(mblist[,"Chromosome"])) { #find out number of rows that will be displayed
+              if(currx + sum(mblist[,"Chromosome"] == chr) > maxwidth) {
+                currx = 0
+                numrows = numrows + 1
+              }
+              currx = currx + sum(mblist[,"Chromosome"] == chr) + chrspacing
             }
+            currx = 0
             for(chr in unique(mblist[,"Chromosome"])) {
               relevantmirs = data[substr(data[,"chr"], 4, 1000) == chr,]
-              if(currx + nrow(relevantmirs) > maxwidth) {
+              relevantmirs = relevantmirs[!is.na(relevantmirs[, "no"]),]
+              sigrelevantmirs = relevantmirs[relevantmirs[,"sig"],]
+              if(currx + sum(mblist[,"Chromosome"] == chr) > maxwidth) {
                 currx = 0
-                curry = curry - linespacing - barheight
+                curry = curry - linespacing - 2 * barheight - maxlinesigoff
+                maxlinesigoff = 0
               }
-              barxmins = c(barxmins, currx)
-              barxmaxs = c(barxmaxs, currx + sum(mblist[,"Chromosome"] == chr))
-              barymins = c(barymins, curry + headerheight)
-              barymaxs = c(barymaxs, curry)
+              headerxmins = c(headerxmins, currx)
+              headerxmaxs = c(headerxmaxs, currx + sum(mblist[,"Chromosome"] == chr))
+              headerymins = c(headerymins, curry + headerheight)
+              headerymaxs = c(headerymaxs, curry)
+              headerlabels = c(headerlabels, chr)
               if(nrow(relevantmirs) > 0) {
-                for(i in 1:nrow(relevantmirs)) {
-                  if(!is.na(relevantmirs[i, "no"])) {
-                    xmins = c(xmins, currx + relevantmirs[i, "no"])
-                    xmaxs = c(xmaxs, currx + relevantmirs[i, "no"] + 1)
-                    ymins = c(ymins, curry)
-                    ymaxs = c(ymaxs, curry - barheight)
-                    colors = c(colors, "bar")
-                    alphas = c(alphas, alphafun(relevantmirs[i,"foldchange"]))
-                  }
+                for(j in 1:2) {
+                  xmins = c(xmins, currx + relevantmirs[, "no"])
+                  xmaxs = c(xmaxs, currx + relevantmirs[, "no"] + 1)
+                  ymins = c(ymins, rep(curry - (barheight * j), nrow(relevantmirs)))
+                  ymaxs = c(ymaxs, rep(curry - (barheight * (j - 1)), nrow(relevantmirs)))
+                }
+                colors = c(colors, rep(c("expression", "foldchange"), each = nrow(relevantmirs)))
+                alphas = c(alphas, expressionalphafun(relevantmirs[,"averageexpression"]), foldchangealphafun(relevantmirs[,"foldchange"]))
+                
+                if(nrow(sigrelevantmirs) > 0) {
+                  #name of mirna
+                  sigxs = c(sigxs, currx + sigrelevantmirs[, "no"])
+                  sigys = c(sigys, curry - barheight * 2 - textspacing * numrows * 0.2 * (1:nrow(sigrelevantmirs)))
+                  siglabels = c(siglabels, substr(sigrelevantmirs[,"id"], 5, 1000))
+                  #average expression
+                  sigxs = c(sigxs, currx + sigrelevantmirs[, "no"])
+                  sigys = c(sigys, curry - barheight * 0.5 - textspacing * (1:nrow(sigrelevantmirs) - nrow(sigrelevantmirs)/2 - 0.5))
+                  siglabels = c(siglabels, round(sigrelevantmirs[,"averageexpression"], 2))
+                  #fold change
+                  sigxs = c(sigxs, currx + sigrelevantmirs[, "no"])
+                  sigys = c(sigys, curry - barheight * 1.5 - textspacing * (1:nrow(sigrelevantmirs) - nrow(sigrelevantmirs)/2 - 0.5))
+                  siglabels = c(siglabels, round(sigrelevantmirs[,"foldchange"], 2))
+                  maxlinesigoff = max(maxlinesigoff, textspacing * numrows * 0.2 * (1:nrow(sigrelevantmirs)))
                 }
               }
               currx = currx + sum(mblist[,"Chromosome"] == chr) + chrspacing
             }
+            
             df = data.frame(xmins, xmaxs, ymins, ymaxs, colors, alphas)
-            df2 = data.frame(barxmins, barxmaxs, barymins, barymaxs)
+            df2 = data.frame(headerxmins, headerxmaxs, headerymins, headerymaxs)
+            df3 = data.frame(sigxs, sigys, siglabels)
             p = ggplot(df) + geom_rect(aes(xmin = xmins, ymin = ymins, xmax = xmaxs, ymax = ymaxs, 
-                                           fill = colors, alpha = alphas)) + scale_fill_manual(values = c(bar = "#800000", header = alpha("#808080", 0.5)))
-            p = p + geom_rect(data = df2, mapping = aes(xmin = barxmins, ymin = barymins, xmax = barxmaxs, ymax = barymaxs, fill = "header"))
+                                           fill = colors, alpha = alphas)) + scale_fill_manual(values = c(foldchange = "#800000", expression = "#008000", header = alpha("#808080", 0.5)))
+            p = p + geom_rect(data = df2, mapping = aes(xmin = headerxmins, ymin = headerymins, xmax = headerxmaxs, ymax = headerymaxs, fill = "header"))
+            p = p + geom_text(data = df2, mapping = aes(x = (headerxmins + headerxmaxs) / 2, y = (headerymins + headerymaxs) / 2, label = headerlabels))
+            p = p + geom_text(data = df3, mapping = aes(x = sigxs, y = sigys, label = siglabels))
             print(p)
             #print the ggplot
           }
