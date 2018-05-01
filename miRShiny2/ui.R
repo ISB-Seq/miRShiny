@@ -811,9 +811,9 @@ dashboardPage(skin="yellow",
                                 inputId = "circlePlotBandWidthMult",
                                 label = "Band width multiplier",
                                 value = 1,
-                                min = 0.2,
+                                min = 0.25,
                                 max = 5,
-                                step = 0.4
+                                step = 0.25
                               ),
                               numericInput(
                                 inputId = "circlePlotBandColorExp",
@@ -829,9 +829,9 @@ dashboardPage(skin="yellow",
                                   inputId = "circlePlotLinkWidthMult",
                                   label = "Link width multiplier",
                                   value = 1,
-                                  min = 0.2,
+                                  min = 0.25,
                                   max = 5,
-                                  step = 0.4
+                                  step = 0.25
                                 ),
                                 numericInput(
                                   inputId = "circlePlotLinkColorExp",
