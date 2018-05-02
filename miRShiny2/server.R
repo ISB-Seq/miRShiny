@@ -1384,7 +1384,7 @@ shinyServer(function(input, output) {
       #return(plotOutput("heatmap", width = w, height = h))
       #return(heatmaply("heatmap", width = w, height = h))
       #return(plotOutput("heatmap"))
-      # return(heatmaply(mtcars))
+      #return(heatmaply(mtcars))
       return(heatmaply(storageValues$hmMatrix))
       
       #PLACEKEEPER
