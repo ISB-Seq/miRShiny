@@ -691,11 +691,15 @@ dashboardPage(skin="yellow",
                               ),
                               wellPanel(
                                 h4("Heatmap"),
-                                selectInput(
-                                  inputId = "dendClust",
-                                  label = "Heatmap Clustering Dimensions",
-                                  choices = c(0, 1, 2),
-                                  selected = 1
+                                checkboxInput(
+                                  inputId = "dendClustR",
+                                  label = "Cluster features?",
+                                  value = F
+                                ),
+                                checkboxInput(
+                                  inputId = "dendClustC",
+                                  label = "Cluster samples?",
+                                  value = F
                                 ),
                                 selectInput(
                                   inputId = "hmColors",
@@ -725,6 +729,55 @@ dashboardPage(skin="yellow",
                                   label = "Reverse Color Palette?",
                                   value = FALSE
                                 )
+                              ),
+                              wellPanel(
+                                h4("Correlation Matrix Options"),
+                                selectInput(
+                                  inputId = "CCcalcType",
+                                  label = "Calculation Method",
+                                  choices = c("Pearson", "Spearman", "Kendall"),
+                                )
+                              ),
+                              wellPanel(
+                                checkboxInput(
+                                  inputId = "CCcolorOptions",
+                                  label = "Show color options?",
+                                  value = FALSE
+                                ),
+                                conditionalPanel(
+                                  condition = "input.CCcolorOptions",
+                                  selectInput(
+                                    inputId = "CCplotColors",
+                                    label = "Color Palette",
+                                    choices =
+                                      c(
+                                        'Default',
+                                        'YellowOrangeRed',
+                                        'YellowGreenBlue',
+                                        'RedYellowGreen',
+                                        'RedYellowBlue',
+                                        'RedBlue',
+                                        'Set1',
+                                        'Set2',
+                                        'Set3',
+                                        'Spectral',
+                                        'Rainbow',
+                                        'RedGreenBlue',
+                                        'RedBlackGreen',
+                                        'Rainbow2.0',
+                                        'Viridis',
+                                        'Magma',
+                                        'Inferno',
+                                        'Plasma'
+                                      ),
+                                    selected = 'Default'
+                                  ),
+                                  checkboxInput(
+                                    inputId = "CCcolorsRev",
+                                    label = "Reverse Palette?",
+                                    value = FALSE
+                                  )
+                                )
                               )
                             ),
                             column(
@@ -739,16 +792,78 @@ dashboardPage(skin="yellow",
                               div(tableOutput("sigMirTable"), style = "font-size:100%"),
                               HTML('<br>'),
                               HTML('<br>'),
+<<<<<<< HEAD
                               htmlOutput("heatmapUI")
                               #plotlyOutput("heatmapUI")
             
+=======
+                              htmlOutput("heatmapUI"),
+                              HTML('<br>'),
+                              HTML('<br>'),
+                              htmlOutput("corrmapUI")
+>>>>>>> 0d5275dde3b53e2724403fbc8ed82de68e9c8342
                             )
                           )
                   ),
                   tabItem(tabName = "Genome",
-                          fluidRow(
-                            plotOutput("circularplot", width = "100%", height = "1000px")
+                        fluidRow(
+                          column(3,
+                            wellPanel(
+                              h4("Plot Parameters"),
+                              selectInput(
+                                inputId = "genomicPlotType",
+                                label = "Plot Type",
+                                choices = c("Circular", "Barchart"),
+                                selected = "Circular"
+                              ),
+                              numericInput(
+                                inputId = "circlePlotBandWidthMult",
+                                label = "Band width multiplier",
+                                value = 1,
+                                min = 0.25,
+                                max = 5,
+                                step = 0.25
+                              ),
+                              numericInput(
+                                inputId = "circlePlotBandColorExp",
+                                label = "Band color exponent",
+                                value = 2,
+                                min = 1,
+                                max = 4,
+                                step = 1
+                              ),
+                              conditionalPanel(
+                                condition = "input.genomicPlotType == 'Circular'",
+                                numericInput(
+                                  inputId = "circlePlotLinkWidthMult",
+                                  label = "Link width multiplier",
+                                  value = 1,
+                                  min = 0.25,
+                                  max = 5,
+                                  step = 0.25
+                                ),
+                                numericInput(
+                                  inputId = "circlePlotLinkColorExp",
+                                  label = "Link color exponent",
+                                  value = 4,
+                                  min = 1,
+                                  max = 8,
+                                  step = 1
+                                )
+                              )
+                            ),
+                            wellPanel(
+                              actionButton(
+                                inputId = "circlePlotButton",
+                                label = "Update Plot",
+                                width = '100%'
+                              )
                             )
+                          ),
+                          column(9, 
+                                 plotOutput("circularplot", width = "100%", height = "1000px")
+                          )
+                        )
                   ),
                   tabItem(tabName = "Visualization",
                           fluidRow(
@@ -761,7 +876,7 @@ dashboardPage(skin="yellow",
                                 selectInput(
                                   inputId = 'dePlotType',
                                   label = "Plot Type",
-                                  choices = c("Boxplot", "Violin Plot"),
+                                  choices = c("Boxplot", "Violin Plot", "Split Violin Plot"),
                                   selected = "Boxplot"
                                 ),
                                 conditionalPanel(
@@ -770,7 +885,7 @@ dashboardPage(skin="yellow",
                                   checkboxInput(inputId = "deDot", label = "Overlay Dotplot?", value = FALSE)
                                 ),
                                 conditionalPanel(
-                                  condition = "input.dePlotType == 'Violin Plot'",
+                                  condition = "input.dePlotType == 'Violin Plot' || input.dePlotType == 'Split Violin Plot'",
                                   checkboxInput(inputId = "deBox", label = "Overlay Boxplot", value = TRUE)
                                 ),
                                 HTML('<hr>'),
@@ -831,7 +946,7 @@ dashboardPage(skin="yellow",
                                 h4("File Downloads"),
                                 textInput(
                                   inputId = 'hmImageName',
-                                  label = 'Name for Heatmap Matrix File Download',
+                                  label = 'Name for Heatmap Plot File Download',
                                   value = "experimentName_heatmap",
                                   width = '75%'
                                 ),
@@ -844,6 +959,22 @@ dashboardPage(skin="yellow",
                                   width = '75%'
                                 ),
                                 downloadButton('downloadMatrix', 'Download'),
+                                HTML('<hr style = "width = 75%">'),
+                                textInput(
+                                  inputId = 'corrhmImageName',
+                                  label = 'Name for Correlation Heatmap Matrix File Download',
+                                  value = "experimentName_corrheatmap",
+                                  width = '75%'
+                                ),
+                                downloadButton('downloadCorrHM', 'Download'),
+                                HTML('<hr style = "width = 75%">'),
+                                textInput(
+                                  inputId = 'circularPlotImageName',
+                                  label = 'Name for Genomic Plot File Download',
+                                  value = "experimentName_genomvis",
+                                  width = '75%'
+                                ),
+                                downloadButton('downloadCircPlot', 'Download'),
                                 HTML('<hr style = "width = 75%">'),
                                 textInput(
                                   inputId = 'deName',
