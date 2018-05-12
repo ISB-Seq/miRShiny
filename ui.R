@@ -792,16 +792,10 @@ dashboardPage(skin="yellow",
                               div(tableOutput("sigMirTable"), style = "font-size:100%"),
                               HTML('<br>'),
                               HTML('<br>'),
-<<<<<<< HEAD
-                              htmlOutput("heatmapUI")
-                              #plotlyOutput("heatmapUI")
-            
-=======
                               htmlOutput("heatmapUI"),
                               HTML('<br>'),
                               HTML('<br>'),
                               htmlOutput("corrmapUI")
->>>>>>> 0d5275dde3b53e2724403fbc8ed82de68e9c8342
                             )
                           )
                   ),
