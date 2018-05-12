@@ -842,7 +842,7 @@ shinyServer(function(input, output, session) {
   })
   
   #create volcano plot
-  output$volcanoPlot <- renderPlot({
+  output$volcanoPlot <- renderPlotly({
     if(!is.null(topTableList())){
       if(is.null(input$condition1)){
         return(NULL)
@@ -858,7 +858,7 @@ shinyServer(function(input, output, session) {
         
         incProgress(0.333, detail = "Plotting features")
         vplot <-
-          ggplot(mirlist, aes(
+          ggplotly(ggplot(mirlist, aes(
             x = logFC,
             y = -log10(P.Value),
             colour = threshold
@@ -870,7 +870,7 @@ shinyServer(function(input, output, session) {
           scale_color_manual(values = c("#8c8c8c", "#ff0000")) +
           geom_vline(xintercept = log2(input$logFCcut), color = "Red") +
           geom_vline(xintercept = -log2(input$logFCcut), color = "Red") +
-          geom_abline(intercept = -log10(input$pValCut), slope = 0, color = "Red") 
+          geom_abline(intercept = -log10(input$pValCut), slope = 0, color = "Red")) 
       })
       return(vplot)
     }
