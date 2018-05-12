@@ -1344,9 +1344,49 @@ shinyServer(function(input, output, session) {
     )
   })
   
-  output$heatmapUI <- renderUI({
+#  output$heatmapUI <- renderUI({
+#    if(!is.null(processedElist())&&!is.null(topTableList())){
+#      
+#      mirlist <- topTableList()
+#      elist <- processedElist()
+#      sig <-
+#        (mirlist$P.Value < input$pValCut &
+#           abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
+#      
+#      sig_mirlist <- mirlist[sig,]
+#      
+#      col <- ncol(elist$E)
+#      row <- nrow(sig_mirlist)
+#      
+#      w <- '100%'
+#      h <- 700
+#      
+#      ratio <- col / row
+#      if(ratio < 4) ratio <- 4
+#      if(ratio > 16) ratio <- 16
+#      ratio <- log2(ratio)
+#      
+#      h <- 700 - 175 * (ratio-2)
+#      
+#      if(col <30){
+#        scale <- 0.4 + 0.02 * col
+#        h <- scale * h
+#        w <- paste0(100 * scale, '%')
+#      }
+#      storageValues$hmW <- w
+#      storageValues$hmH <- h
+#      return(plotOutput("heatmap", width = w, height = h))
+#    }
+#    else{
+#      return(NULL)
+#    }
+#  })
+    
+  output$heatmapUI <- renderPlotly({
+    #mirlist <- topTableList()
+    #print(mirlist)
+    
     if(!is.null(processedElist())&&!is.null(topTableList())){
-      
       mirlist <- topTableList()
       elist <- processedElist()
       sig <-
@@ -1354,33 +1394,103 @@ shinyServer(function(input, output, session) {
            abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
       
       sig_mirlist <- mirlist[sig,]
-      
+      print("This is mirlist:")
+      print(mirlist)
+      print("This is sig_mirlist:")
+      print(sig_mirlist)
+      print("storage values hmMatrix:")
+      print(storageValues$hmMatrix)
       col <- ncol(elist$E)
       row <- nrow(sig_mirlist)
       
-      w <- '100%'
-      h <- 700
+      #
+      incProgress(0.25, detail = "Getting DE values")
+      mirlist <- topTableList()
+      elist <- processedElist()
+      incProgress(0.2, detail = "Removing low values")
+      #sig represents which elements of the list are eligible
+      sig <-
+        (mirlist$P.Value < input$pValCut &
+           abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
       
-      ratio <- col / row
-      if(ratio < 4) ratio <- 4
-      if(ratio > 16) ratio <- 16
-      ratio <- log2(ratio)
+      storageValues$sig <- sig
       
-      h <- 700 - 175 * (ratio-2)
       
-      if(col <30){
-        scale <- 0.4 + 0.02 * col
-        h <- scale * h
-        w <- paste0(100 * scale, '%')
+      sig_mir_list <- mirlist[sig,]
+      storageValues$sigMirs <- sig_mir_list$SystematicName
+      
+      
+      heatmap_match <-
+        match(elist$genes$ProbeName, sig_mir_list$ProbeName, nomatch = NA)
+      heatmap_elist <- elist[!is.na(heatmap_match),]
+      heatmap_elist = heatmap_elist[order(heatmap_match[!is.na(heatmap_match)]),] #sorts by the table
+      heatmap_elist = heatmap_elist[,order(heatmap_elist$targets$Condition)] #arranges columns by condition
+      incProgress(0.2, detail = "Applying row transform")
+      topMatrix <- t(scale(t(heatmap_elist$E)))
+      topMatrix[topMatrix < -3] <- -3
+      topMatrix[topMatrix > 3] <- 3
+      storageValues$topMatrix <- topMatrix
+      print("Storage Values:")
+      print(names(storageValues))
+      
+      #insufficient DE features
+      if(nrow(topMatrix) * ncol(topMatrix) < 4){
+        return(NULL)
       }
-      storageValues$hmW <- w
-      storageValues$hmH <- h
-      return(plotOutput("heatmap", width = w, height = h))
+      
+      rownames(topMatrix) <- heatmap_elist$genes$SystematicName
+      colnames(topMatrix) <- heatmap_elist$targets$FileName
+      
+      storageValues$hmMatrix <- topMatrix
+      #
     }
-    else{
-      return(NULL)
-    }
-  })
+    
+    heatmaply({ #HERE
+      # if(!is.null(processedElist())&&!is.null(topTableList())){
+      # 
+      #   mirlist <- topTableList()
+      #   elist <- processedElist()
+      #   sig <-
+      #     (mirlist$P.Value < input$pValCut &
+      #        abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
+      # 
+      #   sig_mirlist <- mirlist[sig,]
+      # 
+      #   col <- ncol(elist$E)
+      #   row <- nrow(sig_mirlist)
+      # 
+      #   w <- '100%'
+      #   h <- 700
+      # 
+      #   ratio <- col / row
+      #   if(ratio < 4) ratio <- 4
+      #   if(ratio > 16) ratio <- 16
+      #   ratio <- log2(ratio)
+      # 
+      #   h <- 700 - 175 * (ratio-2)
+      # 
+      #   if(col <30){
+      #     scale <- 0.4 + 0.02 * col
+      #     h <- scale * h
+      #     w <- paste0(100 * scale, '%')
+      #   }
+      #   storageValues$hmW <- w
+      #   storageValues$hmH <- h
+      #   #don't return, just declare matrix
+      #   #return(plotOutput("heatmap", width = w, height = h))
+      # }
+      # else{
+      #   return(NULL)
+      # }
+      
+      #TO HERE
+      
+      #processedElist
+      #topTableList
+      topMatrix
+    })
+  })    
+    
   output$downloadHM <- downloadHandler(
     filename = function() {
       paste(input$hmImageName, '.png', sep = '')
