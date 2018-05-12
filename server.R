@@ -15,6 +15,7 @@ library(RnaSeqSampleSize)
 library(circlize)
 library(openxlsx) #remember to cite
 library(ComplexHeatmap) #remember to cite, used for legends
+#library(pwr)
 
 #######
 shinyServer(function(input, output, session) {
@@ -549,7 +550,6 @@ shinyServer(function(input, output, session) {
       return(m)
     }, include.colnames = TRUE, include.rownames = FALSE)
   
-  #changed renderPlot to renderPlotly
   output$upperQCPlot <- renderPlot({
     #dont plot until button has been pushed
     if (input$plotQC==0) {
@@ -603,7 +603,7 @@ shinyServer(function(input, output, session) {
               x = paste("PC1 (", pVar[1], "%)"),
               y = paste("PC2 (", pVar[2], "%)"),
               colour = input$sortPCA
-            )
+            ) 
             
             incProgress(0.25, detail = "Applying facets")
             if(input$pcaType == "PC1/PC2"){
@@ -736,11 +736,6 @@ shinyServer(function(input, output, session) {
               lab <- "Sample Number"
               p <- plotOrderBoxplot(E = E, title = t, lab = lab, cont = TRUE)
               print(p)
-
-              # lab <- "Sample Number"
-              # p <- ggplotly(plotOrderBoxplot(E = E, title = t, lab = lab, cont = TRUE))
-              # print(p)
-
             } else{
               if(input$sortBox == 'Condition'){
                 lab <- "Condition"
@@ -847,7 +842,7 @@ shinyServer(function(input, output, session) {
   })
   
   #create volcano plot
-  output$volcanoPlot <- renderPlotly({
+  output$volcanoPlot <- renderPlot({
     if(!is.null(topTableList())){
       if(is.null(input$condition1)){
         return(NULL)
@@ -863,7 +858,7 @@ shinyServer(function(input, output, session) {
         
         incProgress(0.333, detail = "Plotting features")
         vplot <-
-          ggplotly(ggplot(mirlist, aes(
+          ggplot(mirlist, aes(
             x = logFC,
             y = -log10(P.Value),
             colour = threshold
@@ -875,7 +870,7 @@ shinyServer(function(input, output, session) {
           scale_color_manual(values = c("#8c8c8c", "#ff0000")) +
           geom_vline(xintercept = log2(input$logFCcut), color = "Red") +
           geom_vline(xintercept = -log2(input$logFCcut), color = "Red") +
-          geom_abline(intercept = -log10(input$pValCut), slope = 0, color = "Red") )
+          geom_abline(intercept = -log10(input$pValCut), slope = 0, color = "Red") 
       })
       return(vplot)
     }
@@ -883,7 +878,7 @@ shinyServer(function(input, output, session) {
       return(NULL)
     }
   })
-
+  
   output$heatmap <- renderPlot({
     if(!is.null(topTableList())){
       
@@ -1240,10 +1235,6 @@ shinyServer(function(input, output, session) {
     plotOutput("upperQCPlot", width = w, height = h)
   })
   
-  # output$upperPlotUI <- renderPlotly({
-  #   ggplotly()
-  # })
-  
   output$lowerPlotUI <- renderUI({
     input$plotQC
       if(input$plotType == 'Boxplot'){
@@ -1353,8 +1344,7 @@ shinyServer(function(input, output, session) {
     )
   })
   
-  #changed renderUI to renderPlotly
-  output$heatmapUI <- renderPlotly({
+  output$heatmapUI <- renderUI({
     if(!is.null(processedElist())&&!is.null(topTableList())){
       
       mirlist <- topTableList()
@@ -1385,14 +1375,7 @@ shinyServer(function(input, output, session) {
       }
       storageValues$hmW <- w
       storageValues$hmH <- h
-      #changed plotOutput to heatmaply
-      #return(plotOutput("heatmap", width = w, height = h))
-      #return(heatmaply("heatmap", width = w, height = h))
-      #return(plotOutput("heatmap"))
-      #return(heatmaply(mtcars))
-      return(heatmaply(storageValues$hmMatrix))
-      
-      #PLACEKEEPER
+      return(plotOutput("heatmap", width = w, height = h))
     }
     else{
       return(NULL)
