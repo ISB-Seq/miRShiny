@@ -13,15 +13,8 @@ library(NMF)
 library(plyr)
 library(RnaSeqSampleSize)
 library(circlize)
-<<<<<<< HEAD
-library(openxlsx)
-library(plotly)
-library(heatmaply)
-=======
 library(openxlsx) #remember to cite
 library(ComplexHeatmap) #remember to cite, used for legends
->>>>>>> 0d5275dde3b53e2724403fbc8ed82de68e9c8342
-#library(pwr)
 
 #######
 shinyServer(function(input, output, session) {
