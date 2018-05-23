@@ -13,7 +13,7 @@ library(NMF)
 library(plyr)
 library(shinydashboard)
 library(plotly)
-library(heatmaply)
+#library(heatmaply) for whatever reason i cannot install heatmaply
 
 fontSize = "font-size:150%"
 headerFontSize = "font-size:200%"
@@ -176,81 +176,81 @@ dashboardPage(skin="yellow",
                             ),
                             HTML(
                               "<p style='font-size: 150%;font-family:helvetica'>
-                                          <ul style='font-size: 130%;font-family:helvetica'>
-                                          <li><em>R</em>:
-                                          <ul>
-                                          <li>R Core Team (2017). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria.</li>
-                                          <li><a href = 'https://www.R-project.org/'>https://www.R-project.org/</a></li>
-                                          </ul>
-                                          </li>
-                                          <li><em>Bioconductor</em>:
-                                          <ul>
-                                          <li>Orchestrating high-throughput genomic analysis with Bioconductor. W. Huber, V.J. Carey, R. Gentleman,..., M. Morgan Nature Methods, 2015:12, 115.</li>
-                                          <li><a href = 'https://www.bioconductor.org/'>https://www.bioconductor.org/</a></li>
-                                          </ul>
-                                          </li>
-                                          <li><em>shiny</em>:
-                                          <ul>
-                                          <li>Winston Chang, Joe Cheng, JJ Allaire, Yihui Xie and Jonathan McPherson (2017). shiny: Web Application Framework for R. R package version 1.0.3.</li>
-                                          <li><a href = 'https://CRAN.R-project.org/package=shiny'>https://CRAN.R-project.org/package=shiny</a></li>
-                                          </ul>
-                                          </li>
-                                          <li><em>Limma</em>:
-                                          <ul>
-                                          <li>Ritchie, M.E., Phipson, B., Wu, D., Hu, Y., Law, C.W., Shi, W., and Smyth, G.K. (2015). limma powers differential expression analyses for RNA-sequencing and microarray studies. Nucleic Acids Research 43(7), e47.</li>
-                                          </ul>
-                                          </li>
-                                          <li><em>edgeR</em>:
-                                          <ul>
-                                          <li>McCarthy DJ, Chen Y and Smyth GK (2012). Differential expression analysis of multifactor RNA-Seq experiments with respect to biological variation. Nucleic Acids Research 40, 4288-4297</li>
-                                          </ul>
-                                          </li>
-                                          <li><em>DESeq2</em>:
-                                          <ul>
-                                          <li>Love, M.I., Huber, W., Anders, S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2 Genome Biology 15(12):550 (2014)</li>
-                                          </ul>
-                                          </li>
-                                          <li><em>ggplot2</em>:
-                                          <ul>
-                                          <li>H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2009.</li>
-                                          </ul>
-                                          </li>
-                                          <li><em>sva</em>:
-                                          <ul>
-                                          <li>Leek JT, Johnson WE, Parker HS, Fertig EJ, Jaffe AE, Storey JD, Zhang Y and Torres LC (2017). sva: Surrogate Variable Analysis. R package version 3.24.4.</li>
-                                          </ul>
-                                          </li>
-                                          <li><em>NMF</em>:
-                                          <ul>
-                                          <li>Renaud Gaujoux, Cathal Seoighe (2010). A flexible R package for nonnegative matrix factorization. BMC Bioinformatics 2010, 11:367.</li>
-                                          </ul>
-                                          </li>
-                                          <li><em>reader</em>:
-                                          <ul>
-                                          <li>Nicholas Cooper (2017). reader: Suite of Functions to Flexibly Read Data from Files. R package version 1.0.6.</li>
-                                          <li><a href = 'https://CRAN.R-project.org/package=reader'>https://CRAN.R-project.org/package=reader</a></li>
-                                          </ul>
-                                          </li>
-                                          <li><em>viridis</em>:
-                                          <ul>
-                                          <li>Simon Garnier (2017). viridis: Default Color Maps from 'matplotlib'. R package version 0.4.0.</li>
-                                          <li><a href = 'https://CRAN.R-project.org/package=viridis'>https://CRAN.R-project.org/package=viridis</a></li>
-                                          </ul>
-                                          </li>
-                                          <li><em>RnaSeqSampleSize</em>:
-                                          <ul>
-                                          <li>Zhao S, Li C, Guo Y, Sheng Q and Shyr Y (2017). RnaSeqSampleSize: RnaSeqSampleSize. R package version 1.10.0.</li>
-                                          <li><a href = 'http://bioconductor.org/packages/release/bioc/html/RnaSeqSampleSize.html'>http://bioconductor.org/packages/release/bioc/html/RnaSeqSampleSize.html</a></li>
-                                          </ul>
-                                          </li>
-                                          <li><em>circlize</em>:
-                                          <ul>
-                                          <li>Gu, Z. (2014) circlize implements and enhances circular visualization in R. Bioinformatics.</li>
-                                          <li><a href = '10.1093/bioinformatics/btu393'>10.1093/bioinformatics/btu393</a></li>
-                                          </ul>
-                                          </li>
-                                          </ul>
-                                          </p>"
+                              <ul style='font-size: 130%;font-family:helvetica'>
+                              <li><em>R</em>:
+                              <ul>
+                              <li>R Core Team (2017). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria.</li>
+                              <li><a href = 'https://www.R-project.org/'>https://www.R-project.org/</a></li>
+                              </ul>
+                              </li>
+                              <li><em>Bioconductor</em>:
+                              <ul>
+                              <li>Orchestrating high-throughput genomic analysis with Bioconductor. W. Huber, V.J. Carey, R. Gentleman,..., M. Morgan Nature Methods, 2015:12, 115.</li>
+                              <li><a href = 'https://www.bioconductor.org/'>https://www.bioconductor.org/</a></li>
+                              </ul>
+                              </li>
+                              <li><em>shiny</em>:
+                              <ul>
+                              <li>Winston Chang, Joe Cheng, JJ Allaire, Yihui Xie and Jonathan McPherson (2017). shiny: Web Application Framework for R. R package version 1.0.3.</li>
+                              <li><a href = 'https://CRAN.R-project.org/package=shiny'>https://CRAN.R-project.org/package=shiny</a></li>
+                              </ul>
+                              </li>
+                              <li><em>Limma</em>:
+                              <ul>
+                              <li>Ritchie, M.E., Phipson, B., Wu, D., Hu, Y., Law, C.W., Shi, W., and Smyth, G.K. (2015). limma powers differential expression analyses for RNA-sequencing and microarray studies. Nucleic Acids Research 43(7), e47.</li>
+                              </ul>
+                              </li>
+                              <li><em>edgeR</em>:
+                              <ul>
+                              <li>McCarthy DJ, Chen Y and Smyth GK (2012). Differential expression analysis of multifactor RNA-Seq experiments with respect to biological variation. Nucleic Acids Research 40, 4288-4297</li>
+                              </ul>
+                              </li>
+                              <li><em>DESeq2</em>:
+                              <ul>
+                              <li>Love, M.I., Huber, W., Anders, S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2 Genome Biology 15(12):550 (2014)</li>
+                              </ul>
+                              </li>
+                              <li><em>ggplot2</em>:
+                              <ul>
+                              <li>H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2009.</li>
+                              </ul>
+                              </li>
+                              <li><em>sva</em>:
+                              <ul>
+                              <li>Leek JT, Johnson WE, Parker HS, Fertig EJ, Jaffe AE, Storey JD, Zhang Y and Torres LC (2017). sva: Surrogate Variable Analysis. R package version 3.24.4.</li>
+                              </ul>
+                              </li>
+                              <li><em>NMF</em>:
+                              <ul>
+                              <li>Renaud Gaujoux, Cathal Seoighe (2010). A flexible R package for nonnegative matrix factorization. BMC Bioinformatics 2010, 11:367.</li>
+                              </ul>
+                              </li>
+                              <li><em>reader</em>:
+                              <ul>
+                              <li>Nicholas Cooper (2017). reader: Suite of Functions to Flexibly Read Data from Files. R package version 1.0.6.</li>
+                              <li><a href = 'https://CRAN.R-project.org/package=reader'>https://CRAN.R-project.org/package=reader</a></li>
+                              </ul>
+                              </li>
+                              <li><em>viridis</em>:
+                              <ul>
+                              <li>Simon Garnier (2017). viridis: Default Color Maps from 'matplotlib'. R package version 0.4.0.</li>
+                              <li><a href = 'https://CRAN.R-project.org/package=viridis'>https://CRAN.R-project.org/package=viridis</a></li>
+                              </ul>
+                              </li>
+                              <li><em>RnaSeqSampleSize</em>:
+                              <ul>
+                              <li>Zhao S, Li C, Guo Y, Sheng Q and Shyr Y (2017). RnaSeqSampleSize: RnaSeqSampleSize. R package version 1.10.0.</li>
+                              <li><a href = 'http://bioconductor.org/packages/release/bioc/html/RnaSeqSampleSize.html'>http://bioconductor.org/packages/release/bioc/html/RnaSeqSampleSize.html</a></li>
+                              </ul>
+                              </li>
+                              <li><em>circlize</em>:
+                              <ul>
+                              <li>Gu, Z. (2014) circlize implements and enhances circular visualization in R. Bioinformatics.</li>
+                              <li><a href = '10.1093/bioinformatics/btu393'>10.1093/bioinformatics/btu393</a></li>
+                              </ul>
+                              </li>
+                              </ul>
+                              </p>"
                             )
                           )
                   ),
@@ -288,48 +288,48 @@ dashboardPage(skin="yellow",
                             ),
                             HTML(
                               "<p style='font-family:helvetica'>
-                                          <ul style='font-size: 150%;font-family:helvetica'>
-                                          <li><em>11/8/2017</em></li>
-                                          <ul>
-                                          <li><em>Feature Changes</em></li>
-                                          <ul>
-                                          <li>Added a new tab: <b>Statistical Power Analysis.</b></li>
-                                          <ul>
-                                          <li>Given parameters of your data, it will determine the relation between sample size and statistical power.</li>
-                                          <li>Can automatically set parameters based on your uploaded data.</li>
-                                          <li>Includes a variety of different methods to plot this relationship.</li>
-                                          </ul>
-                                          </ul>
-                                          </ul>
-                                          <li><em>8/2/2017</em></li>
-                                          <ul>
-                                          <li><em>Usage Changes</em></li>
-                                          <ul>
-                                          <li>Changed required label in sample information file to <code>condition</code> from <code>conditions</code> for compatibility purposes.</li>
-                                          </ul>
-                                          <li><em>Feature Changes</em></li>
-                                          <ul>
-                                          <li>PCA Plots/Correlation Coefficient Matrix now generatable in Quality Control tab.</li>
-                                          <li>Quality Control plots can now be sorted/grouped/facetted by various factors</li>
-                                          <li>Batch correction from package 'sva' now enabled for experiments with batch effects.</li>
-                                          <li>Differentially expressed microRNAs can now be plotted side-by-side for comparison.</li>
-                                          <li>Expanded information shown in status boxes.</li>
-                                          </ul>
-                                          <li><em>Interface Changes</em></li>
-                                          <ul>
-                                          <li>Data download links moved to a new tab.</li>
-                                          <li>Modals are now generated after successful upload and processing of data.</li>
-                                          <li>Loading bars reimplemented for most processes.</li>
-                                          <li>Minor label text changes.</li>
-                                          <li>Plot colors darkened for increased clarity.</li>
-                                          </ul>
-                                          <li><em>Bug Fixes</em></li>
-                                          <ul>
-                                          <li>Filtering threshold now displays properly when subsetting data.</li>
-                                          </ul>
-                                          </ul>
-                                          </ul>
-                                          </p>"
+                              <ul style='font-size: 150%;font-family:helvetica'>
+                              <li><em>11/8/2017</em></li>
+                              <ul>
+                              <li><em>Feature Changes</em></li>
+                              <ul>
+                              <li>Added a new tab: <b>Statistical Power Analysis.</b></li>
+                              <ul>
+                              <li>Given parameters of your data, it will determine the relation between sample size and statistical power.</li>
+                              <li>Can automatically set parameters based on your uploaded data.</li>
+                              <li>Includes a variety of different methods to plot this relationship.</li>
+                              </ul>
+                              </ul>
+                              </ul>
+                              <li><em>8/2/2017</em></li>
+                              <ul>
+                              <li><em>Usage Changes</em></li>
+                              <ul>
+                              <li>Changed required label in sample information file to <code>condition</code> from <code>conditions</code> for compatibility purposes.</li>
+                              </ul>
+                              <li><em>Feature Changes</em></li>
+                              <ul>
+                              <li>PCA Plots/Correlation Coefficient Matrix now generatable in Quality Control tab.</li>
+                              <li>Quality Control plots can now be sorted/grouped/facetted by various factors</li>
+                              <li>Batch correction from package 'sva' now enabled for experiments with batch effects.</li>
+                              <li>Differentially expressed microRNAs can now be plotted side-by-side for comparison.</li>
+                              <li>Expanded information shown in status boxes.</li>
+                              </ul>
+                              <li><em>Interface Changes</em></li>
+                              <ul>
+                              <li>Data download links moved to a new tab.</li>
+                              <li>Modals are now generated after successful upload and processing of data.</li>
+                              <li>Loading bars reimplemented for most processes.</li>
+                              <li>Minor label text changes.</li>
+                              <li>Plot colors darkened for increased clarity.</li>
+                              </ul>
+                              <li><em>Bug Fixes</em></li>
+                              <ul>
+                              <li>Filtering threshold now displays properly when subsetting data.</li>
+                              </ul>
+                              </ul>
+                              </ul>
+                              </p>"
                             )
                           )
                   ),
@@ -793,6 +793,7 @@ dashboardPage(skin="yellow",
                               HTML('<br>'),
                               HTML('<br>'),
                               #htmlOutput("heatmapUI"),
+                              #plotlyOutput(renderPlotly({heatmaply(mtcars)}))
                               plotlyOutput("heatmapUI", height = 800, width = '85%'),
                               HTML('<br>'),
                               HTML('<br>'),
@@ -941,7 +942,7 @@ dashboardPage(skin="yellow",
                                 h4("File Downloads"),
                                 textInput(
                                   inputId = 'hmImageName',
-                                  label = 'Name for Heatmap Plot File Download',
+                                  label = 'Name for Heatmap Matrix File Download',
                                   value = "experimentName_heatmap",
                                   width = '75%'
                                 ),

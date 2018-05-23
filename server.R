@@ -72,7 +72,6 @@ shinyServer(function(input, output, session) {
           ))
           return(NULL)
         }
-
         
         matrix[is.na(matrix)] <- 0
         matrix[is.null(matrix)] <- 0
@@ -587,7 +586,6 @@ shinyServer(function(input, output, session) {
               colour <- factor(pEL$targets$batch)
             }
             labels <- colnames(matrix)
-    
             condition <- pEL$targets$Condition
             comps <- data.frame(labels, pc1, pc2, pc3, colour, condition)
             if(!is.null(pEL$targets$group)){
@@ -771,7 +769,6 @@ shinyServer(function(input, output, session) {
       if(!is.null(storageValues$svaE)){
         pEL$E <- storageValues$svaE
       }
-    
       if (input$plotType == "PCA Plot") {
         return(NULL)
       } else if (input$plotType == "Correlation Coefficient Matrix") {
@@ -878,7 +875,6 @@ shinyServer(function(input, output, session) {
       return(NULL)
     }
   })
-  
   output$heatmap <- renderPlot({
     if(!is.null(topTableList())){
       
@@ -972,7 +968,6 @@ shinyServer(function(input, output, session) {
       plotColor(p, discrete = FALSE, input = input$CCplotColors, rev = input$CCcolorsRev)
     }
   })
-  
   output$sigMirTable <- renderTable({
     if(!is.null(topTableList())){
       mirlist <- topTableList()
@@ -1237,12 +1232,12 @@ shinyServer(function(input, output, session) {
   
   output$lowerPlotUI <- renderUI({
     input$plotQC
-      if(input$plotType == 'Boxplot'){
-        w <- '100%'
-        h <- 450
-      }else{
-        return(NULL)
-      }
+    if(input$plotType == 'Boxplot'){
+      w <- '100%'
+      h <- 450
+    }else{
+      return(NULL)
+    }
     plotOutput("lowerQCPlot", width = w, height = h)
   })
   
@@ -1251,7 +1246,6 @@ shinyServer(function(input, output, session) {
     h = session$clientData$output_corrmap_width
     plotOutput("corrmap", width = "100%", height = h)
   })
-  
   output$sortBoxplotUI <- renderUI({
     rEL <- rawElist()
     choices <- c("Sample Number", "Condition")
@@ -1344,44 +1338,53 @@ shinyServer(function(input, output, session) {
     )
   })
   
-#  output$heatmapUI <- renderUI({
-#    if(!is.null(processedElist())&&!is.null(topTableList())){
-#      
-#      mirlist <- topTableList()
-#      elist <- processedElist()
-#      sig <-
-#        (mirlist$P.Value < input$pValCut &
-#           abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
-#      
-#      sig_mirlist <- mirlist[sig,]
-#      
-#      col <- ncol(elist$E)
-#      row <- nrow(sig_mirlist)
-#      
-#      w <- '100%'
-#      h <- 700
-#      
-#      ratio <- col / row
-#      if(ratio < 4) ratio <- 4
-#      if(ratio > 16) ratio <- 16
-#      ratio <- log2(ratio)
-#      
-#      h <- 700 - 175 * (ratio-2)
-#      
-#      if(col <30){
-#        scale <- 0.4 + 0.02 * col
-#        h <- scale * h
-#        w <- paste0(100 * scale, '%')
-#      }
-#      storageValues$hmW <- w
-#      storageValues$hmH <- h
-#      return(plotOutput("heatmap", width = w, height = h))
-#    }
-#    else{
-#      return(NULL)
-#    }
-#  })
-    
+  # output$heatmapUI <- renderUI({
+  #   if(!is.null(processedElist())&&!is.null(topTableList())){
+  #     
+  #     mirlist <- topTableList()
+  #     elist <- processedElist()
+  #     sig <-
+  #       (mirlist$P.Value < input$pValCut &
+  #          abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
+  #     
+  #     sig_mirlist <- mirlist[sig,]
+  #     
+  #     col <- ncol(elist$E)
+  #     row <- nrow(sig_mirlist)
+  #     
+  #     w <- '100%'
+  #     h <- 700
+  #     
+  #     ratio <- col / row
+  #     if(ratio < 4) ratio <- 4
+  #     if(ratio > 16) ratio <- 16
+  #     ratio <- log2(ratio)
+  #     
+  #     h <- 700 - 175 * (ratio-2)
+  #     
+  #     if(col <30){
+  #       scale <- 0.4 + 0.02 * col
+  #       h <- scale * h
+  #       w <- paste0(100 * scale, '%')
+  #     }
+  #     storageValues$hmW <- w
+  #     storageValues$hmH <- h
+  #     return(plotOutput("heatmap", width = w, height = h))
+  #   }
+  #   else{
+  #     return(NULL)
+  #   }
+  # })
+  
+  # Working Test Implementation of heatmaply:
+  
+  # output$heatmapUI <- renderPlotly({
+  #   heatmaply(mtcars, xlab = "Features", ylab = "Cars",
+  #             margins = c(60,100,40,20))
+  # })
+  
+  # Try to link to EList:
+  
   output$heatmapUI <- renderPlotly({
     #mirlist <- topTableList()
     #print(mirlist)
@@ -1509,6 +1512,7 @@ shinyServer(function(input, output, session) {
       write.csv(heatmapMatrixFile(), file)
     }
   )
+
   output$downloadCorrHM = downloadHandler(
     filename = function() {
       paste0(input$corrhmImageName, ".png")
@@ -1697,7 +1701,7 @@ shinyServer(function(input, output, session) {
         #get the distribution object from the raw elist, even if user uses DE mirna
         #produces an NA if there is no replication
         dataMatrixDistribution = est_count_dispersion(rawElist()$E,
-          group = rawElist()$targets$group, minAveCount = 0, subSampleNum = 100)
+                                                      group = rawElist()$targets$group, minAveCount = 0, subSampleNum = 100)
         if(!is.na(dataMatrixDistribution$common.dispersion)) {
           #only used to print out parameters in the table
           maxdispersion = "NA"
@@ -1809,7 +1813,7 @@ shinyServer(function(input, output, session) {
   rownames = T)
   #THERE HAS TO BE A BETTER WAY
   output$powerTable1 = renderTable(if(!is.null(storageValues$numPowerCurves) && storageValues$numPowerCurves > 0){storageValues$powerTables[[1]]}else{NULL}, digits = 3, caption = "<b><h4>Power table 1</h4></b>", caption.placement = getOption("xtable.caption.placement", "top"),
-                                    caption.width = getOption("xtable.caption.width", NULL))
+                                   caption.width = getOption("xtable.caption.width", NULL))
   output$powerTable2 = renderTable(if(!is.null(storageValues$numPowerCurves) && storageValues$numPowerCurves > 1){storageValues$powerTables[[2]]}else{NULL}, digits = 3, caption = "<b><h4>Power table 2</h4></b>", caption.placement = getOption("xtable.caption.placement", "top"),
                                    caption.width = getOption("xtable.caption.width", NULL))
   output$powerTable3 = renderTable(if(!is.null(storageValues$numPowerCurves) && storageValues$numPowerCurves > 2){storageValues$powerTables[[3]]}else{NULL}, digits = 3, caption = "<b><h4>Power table 3</h4></b>", caption.placement = getOption("xtable.caption.placement", "top"),
@@ -2321,8 +2325,6 @@ shinyServer(function(input, output, session) {
     }
   } 
   
-
-  
   plotOrderBoxplot<- function(orderVector = NULL, E, lab, title, cont = FALSE){
     if(is.null(orderVector)){
       orderVector <- 1:ncol(E)
@@ -2534,8 +2536,8 @@ shinyServer(function(input, output, session) {
   }
   #copy of function plot_power_curve but with a legend that makes sense
   plot_power_curve_better = function (result, cexLegend = 1, type = "b", xlab = "Sample Size", 
-            ylab = "Power", pch = 16, lwd = 3, las = 1, cex = 1.5, main = "Power Curve", 
-            col = "red") 
+                                      ylab = "Power", pch = 16, lwd = 3, las = 1, cex = 1.5, main = "Power Curve", 
+                                      col = "red") 
   {
     if (identical(names(result), c("iter", "f.root", "root", 
                                    "process", "parameters")) || identical(names(result), 
@@ -2599,5 +2601,4 @@ shinyServer(function(input, output, session) {
     layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, position = position, show.legend = show.legend, inherit.aes = inherit.aes, params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
   }
 })
-
 
