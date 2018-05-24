@@ -1397,58 +1397,58 @@ shinyServer(function(input, output, session) {
            abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
       
       sig_mirlist <- mirlist[sig,]
-      print("This is mirlist:")
-      print(mirlist)
-      print("This is sig_mirlist:")
-      print(sig_mirlist)
-      print("storage values hmMatrix:")
-      print(storageValues$hmMatrix)
+      #print("This is mirlist:")
+      #print(mirlist)
+      #print("This is sig_mirlist:")
+      #print(sig_mirlist)
+      #print("storage values hmMatrix:")
+      #print(storageValues$hmMatrix)
       col <- ncol(elist$E)
       row <- nrow(sig_mirlist)
       
-      #
-      incProgress(0.25, detail = "Getting DE values")
-      mirlist <- topTableList()
-      elist <- processedElist()
-      incProgress(0.2, detail = "Removing low values")
-      #sig represents which elements of the list are eligible
-      sig <-
-        (mirlist$P.Value < input$pValCut &
-           abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
-      
-      storageValues$sig <- sig
-      
-      
-      sig_mir_list <- mirlist[sig,]
-      storageValues$sigMirs <- sig_mir_list$SystematicName
-      
-      
-      heatmap_match <-
-        match(elist$genes$ProbeName, sig_mir_list$ProbeName, nomatch = NA)
-      heatmap_elist <- elist[!is.na(heatmap_match),]
-      heatmap_elist = heatmap_elist[order(heatmap_match[!is.na(heatmap_match)]),] #sorts by the table
-      heatmap_elist = heatmap_elist[,order(heatmap_elist$targets$Condition)] #arranges columns by condition
-      incProgress(0.2, detail = "Applying row transform")
-      topMatrix <- t(scale(t(heatmap_elist$E)))
-      topMatrix[topMatrix < -3] <- -3
-      topMatrix[topMatrix > 3] <- 3
-      storageValues$topMatrix <- topMatrix
-      print("Storage Values:")
-      print(names(storageValues))
-      
-      #insufficient DE features
-      if(nrow(topMatrix) * ncol(topMatrix) < 4){
-        return(NULL)
-      }
-      
-      rownames(topMatrix) <- heatmap_elist$genes$SystematicName
-      colnames(topMatrix) <- heatmap_elist$targets$FileName
-      
-      storageValues$hmMatrix <- topMatrix
-      #
+      withProgress(message = 'Generating heatmap', value = 0, {
+        incProgress(0.25, detail = "Getting DE values")
+        mirlist <- topTableList()
+        elist <- processedElist()
+        incProgress(0.2, detail = "Removing low values")
+        #sig represents which elements of the list are eligible
+        sig <-
+          (mirlist$P.Value < input$pValCut &
+             abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
+        
+        storageValues$sig <- sig
+        
+        
+        sig_mir_list <- mirlist[sig,]
+        storageValues$sigMirs <- sig_mir_list$SystematicName
+        
+        
+        heatmap_match <-
+          match(elist$genes$ProbeName, sig_mir_list$ProbeName, nomatch = NA)
+        heatmap_elist <- elist[!is.na(heatmap_match),]
+        heatmap_elist = heatmap_elist[order(heatmap_match[!is.na(heatmap_match)]),] #sorts by the table
+        heatmap_elist = heatmap_elist[,order(heatmap_elist$targets$Condition)] #arranges columns by condition
+        incProgress(0.2, detail = "Applying row transform")
+        topMatrix <- t(scale(t(heatmap_elist$E)))
+        topMatrix[topMatrix < -3] <- -3
+        topMatrix[topMatrix > 3] <- 3
+        storageValues$topMatrix <- topMatrix
+        print("Storage Values:")
+        print(names(storageValues))
+        
+        #insufficient DE features
+        if(nrow(topMatrix) * ncol(topMatrix) < 4){
+          return(NULL)
+        }
+        
+        rownames(topMatrix) <- heatmap_elist$genes$SystematicName
+        colnames(topMatrix) <- heatmap_elist$targets$FileName
+        
+        storageValues$hmMatrix <- topMatrix
+      })
     }
     
-    heatmaply({ #HERE
+    #heatmaply({ #HERE
       # if(!is.null(processedElist())&&!is.null(topTableList())){
       # 
       #   mirlist <- topTableList()
@@ -1490,8 +1490,8 @@ shinyServer(function(input, output, session) {
       
       #processedElist
       #topTableList
-      topMatrix
-    })
+      #topMatrix
+    #})
   })    
     
   output$downloadHM <- downloadHandler(

@@ -13,7 +13,6 @@ library(NMF)
 library(plyr)
 library(shinydashboard)
 library(plotly)
-#library(heatmaply) for whatever reason i cannot install heatmaply
 
 fontSize = "font-size:150%"
 headerFontSize = "font-size:200%"
