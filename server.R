@@ -1,21 +1,20 @@
-library(ggplot2)
-library(limma)
-library(RColorBrewer)
-library(DESeq2)
-library(edgeR)
-library(shiny)
-library(reshape)
-library(viridis)
-library(sva)
-library(grid)
-library(reader)
-library(NMF)
-library(plyr)
-library(RnaSeqSampleSize)
-library(circlize)
-library(openxlsx) #remember to cite
-library(ComplexHeatmap) #remember to cite, used for legends
-#library(pwr)
+require(ggplot2)
+require(limma)
+require(RColorBrewer)
+require(DESeq2)
+require(edgeR)
+require(shiny)
+require(reshape)
+require(viridis)
+require(sva)
+require(grid)
+require(reader)
+require(NMF)
+require(plyr)
+require(RnaSeqSampleSize)
+require(circlize)
+require(openxlsx) #remember to cite
+require(ComplexHeatmap) #remember to cite, used for legends
 
 #######
 shinyServer(function(input, output, session) {
