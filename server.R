@@ -15,6 +15,7 @@ require(RnaSeqSampleSize)
 require(circlize)
 require(openxlsx) #remember to cite
 require(ComplexHeatmap) #remember to cite, used for legends
+require(heatmaply) #cite
 
 #######
 shinyServer(function(input, output, session) {
@@ -1375,19 +1376,7 @@ shinyServer(function(input, output, session) {
   #   }
   # })
   
-  # Working Test Implementation of heatmaply:
-  
-  # output$heatmapUI <- renderPlotly({
-  #   heatmaply(mtcars, xlab = "Features", ylab = "Cars",
-  #             margins = c(60,100,40,20))
-  # })
-  
-  # Try to link to EList:
-  
   output$heatmapUI <- renderPlotly({
-    #mirlist <- topTableList()
-    #print(mirlist)
-    
     if(!is.null(processedElist())&&!is.null(topTableList())){
       mirlist <- topTableList()
       elist <- processedElist()
@@ -1396,12 +1385,6 @@ shinyServer(function(input, output, session) {
            abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
       
       sig_mirlist <- mirlist[sig,]
-      #print("This is mirlist:")
-      #print(mirlist)
-      #print("This is sig_mirlist:")
-      #print(sig_mirlist)
-      #print("storage values hmMatrix:")
-      #print(storageValues$hmMatrix)
       col <- ncol(elist$E)
       row <- nrow(sig_mirlist)
       
@@ -1444,53 +1427,11 @@ shinyServer(function(input, output, session) {
         colnames(topMatrix) <- heatmap_elist$targets$FileName
         
         storageValues$hmMatrix <- topMatrix
+        
+        incProgress(0.3, detail = "Generating plotly output")
+        return(heatmaply(topMatrix))
       })
     }
-    
-    #heatmaply({ #HERE
-      # if(!is.null(processedElist())&&!is.null(topTableList())){
-      # 
-      #   mirlist <- topTableList()
-      #   elist <- processedElist()
-      #   sig <-
-      #     (mirlist$P.Value < input$pValCut &
-      #        abs(mirlist$logFC) > log2(input$logFCcut) & mirlist$AveExpr > input$AveEcut)
-      # 
-      #   sig_mirlist <- mirlist[sig,]
-      # 
-      #   col <- ncol(elist$E)
-      #   row <- nrow(sig_mirlist)
-      # 
-      #   w <- '100%'
-      #   h <- 700
-      # 
-      #   ratio <- col / row
-      #   if(ratio < 4) ratio <- 4
-      #   if(ratio > 16) ratio <- 16
-      #   ratio <- log2(ratio)
-      # 
-      #   h <- 700 - 175 * (ratio-2)
-      # 
-      #   if(col <30){
-      #     scale <- 0.4 + 0.02 * col
-      #     h <- scale * h
-      #     w <- paste0(100 * scale, '%')
-      #   }
-      #   storageValues$hmW <- w
-      #   storageValues$hmH <- h
-      #   #don't return, just declare matrix
-      #   #return(plotOutput("heatmap", width = w, height = h))
-      # }
-      # else{
-      #   return(NULL)
-      # }
-      
-      #TO HERE
-      
-      #processedElist
-      #topTableList
-      #topMatrix
-    #})
   })    
     
   output$downloadHM <- downloadHandler(
@@ -1700,7 +1641,7 @@ shinyServer(function(input, output, session) {
         #get the distribution object from the raw elist, even if user uses DE mirna
         #produces an NA if there is no replication
         dataMatrixDistribution = est_count_dispersion(rawElist()$E,
-                                                      group = rawElist()$targets$group, minAveCount = 0, subSampleNum = 100)
+          group = rawElist()$targets$group, minAveCount = 0, subSampleNum = 100)
         if(!is.na(dataMatrixDistribution$common.dispersion)) {
           #only used to print out parameters in the table
           maxdispersion = "NA"
